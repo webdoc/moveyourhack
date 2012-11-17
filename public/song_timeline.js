@@ -3,6 +3,7 @@ function SongTimeline(song, interval) {
 	this.beatTimeline = [];
 	this.tatumsTimeline = [];
     this.sectionsTimeline = [];
+    this.segmentsTimeline = [];
 	this.interval = interval;
 };
 
@@ -46,6 +47,8 @@ SongTimeline.prototype.init = function() {
 		// SECTIONS
 		filltimeline(this.sectionsTimeline, analyse.sections, analyse.meta.seconds);
 	
+	    // SEGMENTS
+		filltimeline(this.segmentsTimeline, analyse.segments, analyse.meta.seconds);
 		result.resolve();	
 		
 	}.bind(this));
@@ -57,7 +60,7 @@ SongTimeline.prototype.getResult = function() {
 	var i;
 	var result = [];
 	for (i = 0; i < count; i++) {
-		result[i] = (this.beatTimeline[i] + this.tatumsTimeline[i] + this.sectionsTimeline[i]) / 3
+		result[i] = (this.beatTimeline[i] + this.tatumsTimeline[i] + this.sectionsTimeline[i] + this.segmentsTimeline[i]) / 4
 	}
 	return result;
 }
