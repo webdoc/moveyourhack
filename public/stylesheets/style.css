@@ -9,6 +9,7 @@ body {
 h1 {
   font-family: "Poiret One";
   font-size: 96px;
+  line-height: 100px;
 }
 
 a {

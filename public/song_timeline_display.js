@@ -14,7 +14,7 @@ SongTimelineDisplay.prototype.render = function(callback) {
     
     for (; i < count || i < this.WIDTH - 1; i++) {
     	var medium = (this.timeline.beatTimeline[i] + this.timeline.tatumsTimeline[i] + this.timeline.sectionsTimeline[i]) / 3
-    	this.ctx.fillRect(i* 20,0, 20, this.HEIGHT * medium);
+    	this.ctx.fillRect(i* 5,0, 5, this.HEIGHT * medium);
     }
 	callback.apply(this, []);
 }
