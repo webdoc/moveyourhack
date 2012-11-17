@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <title><%= title %></title>
+    <link href='http://fonts.googleapis.com/css?family=Poiret+One' rel='stylesheet' type='text/css' />
     <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet" />
     <link rel='stylesheet' href='/stylesheets/style.css' />
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
@@ -15,6 +16,7 @@
       </div>
       <div class="row-fluid">
         <div class="span12">
+          <h1>Move Your Hack</h1>
           <div><a href="/auth/facebook">Login with Facebook</a></div>
           <div id="songchooser"></div>
           <div id="searchResults"></div>
@@ -27,13 +29,20 @@
               player : {
                 onload : function(){
                   console.log(arguments);
+                  DZ.player.pause();
                 }
               }
             });
+
+            DZ.Event.subscribe('player_position', function(args, evt_name){
+              console.log(args);
+            });
+
             var chooser = new SongChooser({
               songChooserNode: "#songchooser",
               searchResultNode: "#searchResults"
             });
+
             chooser.done(function(id){
               console.log('Done' + id);
               DZ.player.playTracks([id], function(){ 
