@@ -14,7 +14,10 @@
 
 
 
+/*
 
+[{"filter":"invertColor","parameters":{}},{"filter":"sepia","parameters":{"amount":"0.44"}},{"filter":"hueSaturation","parameters":{"hue":"0.2","saturation":"0.52"}},{"filter":"denoise","parameters":{"exponent":"28"}},{"filter":"ink","parameters":{"strength":0.7}},{"filter":"hueSaturation","parameters":{"hue":0,"saturation":"0.24"}}]
+ */
 
 <script>
 
@@ -127,7 +130,7 @@ function renderStep1()
 
     var s = score - N / (NORMALIZER.length - 1);
 
-    if (NORMALIZER.length > 10)
+    if (NORMALIZER.length > 20)
       NORMALIZER.splice(0, 1); 
     NORMALIZER.push(score);
 

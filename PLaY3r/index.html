@@ -1,0 +1,79 @@
+<html>
+	<head>
+		<title> The Player </title>
+		<script src="./glfx.js"></script>
+	</head>
+
+	<body>
+
+
+		<script>
+
+
+		// Require : requestAnimFrame
+			   window.requestAnimFrame = (function(){
+			      return  window.requestAnimationFrame       || 
+			              window.webkitRequestAnimationFrame || 
+			              window.mozRequestAnimationFrame    || 
+			              window.oRequestAnimationFrame      || 
+			              window.msRequestAnimationFrame     || 
+			              function( callback ){
+			                window.setTimeout(callback, 1000 / 60);
+			              };
+			    })();
+
+
+		function Game()
+		{
+			this.WIDTH = 0;
+			this.HEIGHT = 0;
+			this.canvas = null;
+			this.ctx = null;
+			this.RUN = 0;
+
+			this.init = function()
+			{
+				this.WIDTH = window.innerWidth;
+				this.HEIGHT = window.innerHeight;
+				this.canvas = document.createElement('canvas');
+				this.canvas.style.width = this.WIDTH;
+				this.canvas.style.height = this.HEIGHT;
+				this.canvas.style.position = 'absolute';
+				this.canvas.style.margin = '0px';
+				this.canvas.style.top = '0px';
+				this.canvas.style.left = '0px';
+				this.canvas.width = this.WIDTH;
+				this.canvas.height = this.HEIGHT;
+				document.body.appendChild(this.canvas);
+				this.ctx = this.canvas.getContext('2d');
+			}
+
+			this.start = function()
+			{
+				this.RUN = 1;
+				this.run();
+			}
+
+			this.stop = function()
+			{
+				this.RUN = 0;
+			}
+
+			this.render = function()
+			{
+				
+			}
+
+			this.run = function()
+			{
+				this.render();	
+				if (this.RUN)
+					requestAnimFrame(this.run);
+			}
+		}
+		var game = new Game();
+		game.init();
+
+		</script>
+	</body>
+</html>
