@@ -29,7 +29,6 @@ SongTimelineDisplay.prototype.run = function()
 {
     if (this.startTime === undefined) {
         this.startTime = new Date();
-        console.log("star is", this.startTime);
     }
     setTimeout(this.refreshTick.bind(this), this.timeline.interval);
 }
@@ -37,7 +36,6 @@ SongTimelineDisplay.prototype.run = function()
 SongTimelineDisplay.prototype.refreshTick = function() {
     var currentDate = new Date();    
     var distance = currentDate.getTime() - this.startTime.getTime();
-    console.log("refresh", distance);
     this.ctx.fillStyle ='#fff';
     this.ctx.fillRect(0, 100, distance * this.SCALE / 1000, 10);
     setTimeout(this.refreshTick.bind(this), this.timeline.interval);
