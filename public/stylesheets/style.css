@@ -6,3 +6,11 @@ body {
 a {
   color: #00B7FF;
 }
+
+.song-chooser-search input {
+  font-size: 21px
+}
+
+.song-chooser-search button {
+  font-size: 21px
+}
