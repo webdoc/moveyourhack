@@ -65,7 +65,7 @@
         console.log('Done' + id);
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
-            timelineDisplay.run();
+            setTimeout("timelineDisplay.run()", 1000);
             DZ.player.seek(0);
             launchGame(timelineDisplay.timeline.getResult());
           });
@@ -80,7 +80,7 @@
       // get its analytics from echonest.
       function handleSongPlayerReady(deezerId, callback){
         var song = new Song(deezerId);
-        var timeline = new SongTimeline(song, 500);
+        var timeline = new SongTimeline(song, 200);
         timeline.init().done(function(){
           timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
           timelineDisplay.render(callback);
