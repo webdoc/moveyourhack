@@ -22,5 +22,5 @@ SongTimelineDisplay.prototype.render = function(callback) {
 SongTimelineDisplay.prototype.updateTime = function(tick)
 {
     this.ctx.fillStyle ='#000'
-    this.ctx.fillRect(0, 100, 10, tick);
+    this.ctx.fillRect(0, 100, tick * 10, 10);
 }
