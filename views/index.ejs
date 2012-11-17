@@ -41,7 +41,6 @@
     <div id="dz-root"></div>
     <script type="text/javascript">
 
-
       DZ.init({
         appId  : '108771',
         channelUrl : 'http://localhost/deezer/channel.html',
@@ -65,8 +64,10 @@
         console.log('Done' + id);
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
-            setTimeout("timelineDisplay.run()", 1000);
+            setTimeout("timelineDisplay.run()", 1300);
+            console.log('beforeok')
             DZ.player.seek(0);
+            console.log('ok')
             launchGame(timelineDisplay.timeline.getResult());
           });
         });

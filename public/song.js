@@ -22,6 +22,10 @@ Song.prototype.getProfile = function() {
 			dataType: "json"
 		}).done(function(profileData){
 			console.log(profileData);
+			if(!profileData.response.songs){
+				alert('Whoops, we cannot find song analysis for this one, try again with another track.')
+				return;
+			}
 			var analysisUrl = profileData.response.songs[0].audio_summary.analysis_url;
 			console.log(analysisUrl);
 			jQuery.ajax({
