@@ -50,6 +50,7 @@
 
             DZ.Event.subscribe('player_position', function(args, evt_name){
               console.log(args);
+              timelineDisplay.updateTime(args[0]);
             });
 
             var chooser = new SongChooser({
@@ -65,13 +66,15 @@
               });
             });
 
+            // Global sucks but..... IT S HACK DAY!
+             var timelineDisplay = null;
             // After the song is loaded in Deezer, go for more fun and
             // get its analytics from echonest.
             function handleSongPlayerReady(deezerId, callback){
               var song = new Song(deezerId);
               var timeline = new SongTimeline(song, 500);
               timeline.init().done(function(){
-                var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
+                timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
                 timelineDisplay.render(callback);
               });
             }
