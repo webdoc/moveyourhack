@@ -18,3 +18,9 @@ SongTimelineDisplay.prototype.render = function(callback) {
     }
 	callback.apply(this, []);
 }
+
+SongTimelineDisplay.prototype.updateTime = function(tick)
+{
+    this.ctx.fillStyle ='#000'
+    this.ctx.fillRect(0, 100, 10, tick);
+}
