@@ -52,7 +52,6 @@
             chooser.done(function(id){
               console.log('Done' + id);
               DZ.player.playTracks([id], function(){ 
-                DZ.player.pause();
                 handleSongPlayerReady(id);
               });
             });
@@ -63,6 +62,7 @@
               var song = new Song(deezerId);
               var timeline = new SongTimeline(song, 100);
               timeline.init().done(function(){
+                DZ.player.seek(0);
                 var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
                 timelineDisplay.render();
               });
