@@ -121,7 +121,7 @@
 					  	this.map[x][y]--;
 
 					  	var angle = Math.random() * Math.PI*2;
-						var speed = Math.random() * 20.;
+						var speed = Math.random() * 10.;
 						var p =
 						{
 							x : x * X, 
@@ -129,7 +129,7 @@
 							xs: Math.sin(angle) * speed,
 							ys: Math.cos(angle) * speed,
 							s  : Math.random() * 40 | 0,
-							l : 2
+							l : 12
 						}
 						this.PARTICLES.push(
 							p
@@ -210,9 +210,9 @@
 				//ctx.drawImage(this.videoCanvas, 0 ,0);
 				// if (Math.random() > 0.01)
 					this.renderPixel();
-		//		else
-		//			this.pushParticles();
-		//		this.renderParticles();
+			//	else
+			//		this.pushParticles();
+			//	this.renderParticles();
 				this.renderScore();
 			}
 
