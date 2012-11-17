@@ -110,7 +110,13 @@
 				var data = this.data;
 				var ctx = this.ctx;
 				var x = 0;
-				ctx.fillStyle = '#ff0';
+
+				if (this.intensity < 0.005)
+					ctx.fillStyle = '#800';
+				else if (this.intensity < 0.02)
+					ctx.fillStyle = '#ff0';
+				else 
+					ctx.fillStyle = '#0f0';
 				ctx.beginPath();
 
 				var X = this.WIDTH / 64;
@@ -122,9 +128,7 @@
 					{
 					  if (this.map[x][y])
 					  {
-					   
 					  	this.map[x][y]--;
-					  	
 						ctx.moveTo(x * X, y * Y);
 						ctx.arc(x * X, Y * y, X/3, 0, Math.PI * 2, true);
 					  }
@@ -144,7 +148,7 @@
 			this.render = function()
 			{		
 				var ctx = this.ctx;
-				ctx.globalAlpha = 0.2;
+				ctx.globalAlpha = 0.1;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
 				ctx.globalAlpha = 1.0;
@@ -159,7 +163,7 @@
 				this.texture.loadContentsOf(this.videoCanvas);
 			    this.fxCanvas.draw(this.texture);
     			this.fxCanvas.mirror();
-   				this.fxCanvas.move();
+   				this.fxCanvas.move(0.01);
     			this.fxCanvas.update();
 			    this.videoCtx.drawImage(this.fxCanvas, 0, 0);
 			    this.intensity = this.compute();
@@ -175,6 +179,7 @@
 
 				var intensity = 0;
 				var x = 0;
+				var hash = 0;
 				while (x < 64)
 				{
 					var y =0;
@@ -184,11 +189,13 @@
 					  {
 					    intensity++;
 					    this.map[x][y] = 6;
+					  	hash += x * y;
 					  }
 					  ++y;
 					}
 					++x;   
 				}
+				console.log(hash);
 				return intensity / 3072;
 			}
 
