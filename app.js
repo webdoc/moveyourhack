@@ -1,7 +1,3 @@
-
-/**
- * Module dependencies.
- */
 var express = require('express')
   , config = require('./config')
   , routes = require('./routes')
@@ -59,7 +55,6 @@ passport.use(new FacebookStrategy({
     user = User.findOne({ facebookId: profile.id }, function(err, user) {
       if (err) { console.log(err); }
       if(!user) {
-        console.log(3);
         User.create({
           facebookId: profile.id
         }, function (errNew, userNew) {
