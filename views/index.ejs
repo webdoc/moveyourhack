@@ -8,10 +8,9 @@
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
     <script type="text/javascript" src="http://cdn-files.deezer.com/js/min/dz.js"></script>
 
-
     <script src="song.js" type="text/javascript"></script>
     <script src="song_timeline.js" type="text/javascript"></script>
-    <script src="song_timeline_display.js" type="text/javascript"></script>    
+    <script src="song_timeline_display.js" type="text/javascript"></script>
     <script src="scripts/songchooser.js"></script>
   </head>
   <body>
@@ -26,58 +25,56 @@
         </div>
       </div>
       <div class="row-fluid">
-        <div class="span12"><div id="dz-root"></div></div>
-      </div>
-      <div class="row-fluid">
         <div class="span12">
           <h1>Move Your Hack</h1>
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
-          <canvas id="canvas" width="2000" height="500"></canvas>
-
-          <script type="text/javascript">
-
-            DZ.init({
-              appId  : '108771',
-              channelUrl : 'http://localhost/deezer/channel.html',
-              player : {
-                onload : function(){
-                  console.log(arguments);
-                }
-              }
-            });
-
-            DZ.Event.subscribe('player_position', function(args, evt_name){
-              console.log(args);
-            });
-
-            var chooser = new SongChooser({
-              songChooserNode: "#songchooser",
-              searchResultNode: "#searchResults"
-            });
-
-            chooser.done(function(id){
-              console.log('Done' + id);
-              DZ.player.playTracks([id], function(){ 
-                handleSongPlayerReady(id);
-              });
-            });
-
-            // After the song is loaded in Deezer, go for more fun and
-            // get its analytics from echonest.
-            function handleSongPlayerReady(deezerId){
-              var song = new Song(deezerId);
-              var timeline = new SongTimeline(song, 100);
-              timeline.init().done(function(){
-                DZ.player.seek(0);
-                var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
-                timelineDisplay.render();
-              });
-            }
-          </script>
+          <div>
+            <canvas id="canvas" width="2000" height="500"></canvas>
+          </div>
         </div>
       </div>
     </div>
+    <div id="dz-root"></div>
+    <script type="text/javascript">
+      DZ.init({
+        appId  : '108771',
+        channelUrl : 'http://localhost/deezer/channel.html',
+        player : {
+          onload : function(){
+            console.log(arguments);
+          }
+        }
+      });
+
+      DZ.Event.subscribe('player_position', function(args, evt_name){
+        console.log(args);
+      });
+
+      var chooser = new SongChooser({
+        songChooserNode: "#songchooser",
+        searchResultNode: "#searchResults"
+      });
+
+      chooser.done(function(id){
+        console.log('Done' + id);
+        DZ.player.playTracks([id], function(){
+          handleSongPlayerReady(id);
+        });
+      });
+
+      // After the song is loaded in Deezer, go for more fun and
+      // get its analytics from echonest.
+      function handleSongPlayerReady(deezerId){
+        var song = new Song(deezerId);
+        var timeline = new SongTimeline(song, 100);
+        timeline.init().done(function(){
+          DZ.player.seek(0);
+          var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
+          timelineDisplay.render();
+        });
+      }
+    </script>
   </body>
 </html>
