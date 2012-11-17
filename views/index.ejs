@@ -51,20 +51,20 @@
 
             chooser.done(function(id){
               console.log('Done' + id);
-              DZ.player.playTracks([id], function(){ 
-                handleSongPlayerReady(id);
+              handleSongPlayerReady(id, function(){
+                DZ.player.playTracks([id], function(){   
+                });                              
               });
             });
 
             // After the song is loaded in Deezer, go for more fun and
             // get its analytics from echonest.
-            function handleSongPlayerReady(deezerId){
+            function handleSongPlayerReady(deezerId, callback){
               var song = new Song(deezerId);
               var timeline = new SongTimeline(song, 100);
               timeline.init().done(function(){
-                DZ.player.seek(0);
                 var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
-                timelineDisplay.render();
+                timelineDisplay.render(callback);
               });
             }
           </script>
