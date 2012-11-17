@@ -1,6 +1,6 @@
 var express = require('express')
-  , config = require('./config')
-  , routes = require('./routes')
+var config = (process.env.NODE_ENV=='production'? require('./config_production') : require('./config'));
+var routes = require('./routes')
   , http = require('http')
   , path = require('path')
   , mongoose = require('mongoose')
