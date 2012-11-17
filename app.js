@@ -1,7 +1,6 @@
 var express = require('express')
   , config = require('./config')
   , routes = require('./routes')
-  , user = require('./routes/user')
   , http = require('http')
   , path = require('path')
   , mongoose = require('mongoose')
@@ -32,11 +31,11 @@ app.configure('development', function(){
 });
 
 var User = db.model('User', new mongoose.Schema({
-  facebookId: Number
+  facebookId: Number,
+  displayName: String
 }));
 
 passport.serializeUser(function(user, done) {
-  console.log(user);
   done(null, user.id);
 });
 
@@ -53,24 +52,28 @@ passport.use(new FacebookStrategy({
   },
   function(accessToken, refreshToken, profile, done) {
     user = User.findOne({ facebookId: profile.id }, function(err, user) {
-      if (err) { console.log(err); }
+      if (err) { console.log(err); return; }
       if(!user) {
         User.create({
-          facebookId: profile.id
+          facebookId: profile.id,
+          displayName: profile.displayName
         }, function (errNew, userNew) {
-          if (errNew) { console.log(errNew); }
+          if (errNew) { console.log(errNew); return; }
           done(null, userNew);
         });
+      }
+      else {
+        done(null, user);
       }
     });
   }
 ));
 
 app.get('/', routes.index);
-app.get('/users', user.list);
-app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['read_stream', 'publish_actions'] }));
+app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'] }));
 app.get('/auth/facebook/callback',
   passport.authenticate('facebook', { successRedirect: '/', failureRedirect: '/login' }));
+app.get('/logout', routes.logout);
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));

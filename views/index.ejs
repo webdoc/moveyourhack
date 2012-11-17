@@ -12,12 +12,20 @@
   <body>
     <div class="container">
       <div class="row-fluid">
+        <div class="span12">
+          <% if(!auth.user) { %>
+            <a href="/auth/facebook">Login with Facebook</a>
+          <% } else { %>
+            <a href="/logout">Logout</a>
+          <% } %>
+        </div>
+      </div>
+      <div class="row-fluid">
         <div class="span12"><div id="dz-root"></div></div>
       </div>
       <div class="row-fluid">
         <div class="span12">
           <h1>Move Your Hack</h1>
-          <div><a href="/auth/facebook">Login with Facebook</a></div>
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
