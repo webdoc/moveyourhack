@@ -43,8 +43,11 @@
 
 			this.SPRITE = [];
 
-			this.init = function()
+			this.soundData = null;
+
+			this.init = function(soundData)
 			{
+				this.soundData = soundData;
 				this.score = 0;
 
 				this.WIDTH = window.innerWidth;
@@ -314,6 +317,7 @@
 
 		function launchGame(SoundArray, soundPlayer)
 		{
-			game.init();
+			console('Let s Dance :)');
+			game.init(SoundArray);
 			userMedia.init();;
 		}
