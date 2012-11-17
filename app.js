@@ -1,5 +1,5 @@
 var express = require('express')
-var config = (process.env.NODE_ENV=='production'? require('./config_production') : require('./config'));
+var config = (process.env.NODE_ENV=='production'? require('./config.production') : require('./config'));
 var routes = require('./routes')
   , http = require('http')
   , path = require('path')
