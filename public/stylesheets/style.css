@@ -1,6 +1,14 @@
 body {
   padding: 50px;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  background: black ;
+  color: white ;
+  font-family: , cursive;
+}
+
+h1 {
+  font-family: "Poiret One";
+  font-size: 96px;
 }
 
 a {
@@ -15,6 +23,6 @@ a {
   font-size: 21px
 }
 
-tr:hover td {
-  background: #EFEFEF ;
+tr.result-line:hover td {
+  background: #333333 ;
 }
