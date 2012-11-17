@@ -11,16 +11,33 @@
   <body>
     <div class="container">
       <div class="row-fluid">
+        <div class="span12"><div id="dz-root"></div></div>
+      </div>
+      <div class="row-fluid">
         <div class="span12">
           <div id="songchooser"></div>
-          <div id="dezzerNode"></div>
           <div id="searchResults"></div>
+          <div id="player"></div>
 
           <script type="text/javascript">
+            DZ.init({
+              appId  : '108771',
+              channelUrl : 'http://localhost:3000/deezer/channel.html',
+              player : {
+                onload : function(){
+                  console.log(arguments);
+                }
+              }
+            });
             var chooser = new SongChooser({
               songChooserNode: "#songchooser",
-              dezzerNode: "#dezzerNode",
               searchResultNode: "#searchResults"
+            });
+            chooser.done(function(id){
+              console.log('Done' + id);
+              DZ.player.playTracks([id], function(){ 
+                console.log('DZ'); 
+              });
             });
           </script>
         </div>

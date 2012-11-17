@@ -14,3 +14,7 @@ a {
 .song-chooser-search button {
   font-size: 21px
 }
+
+tr:hover td {
+  background: #EFEFEF ;
+}
