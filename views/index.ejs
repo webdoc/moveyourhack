@@ -3,9 +3,26 @@
   <head>
     <title><%= title %></title>
     <link rel='stylesheet' href='/stylesheets/style.css' />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript" src="http://cdn-files.deezer.com/js/min/dz.js"></script>
+    <script src="scripts/songchooser.js"></script>
   </head>
   <body>
     <h1><%= title %></h1>
     <p>Welcome to <%= title %></p>
+
+    <div>
+      <h2>Log on Deezer</h2>
+    </div>
+
+    <div id="songchooser"></div>
+    <div id="dezzerNode"></div>
+
+    <script type="text/javascript">
+      var chooser = new SongChooser({
+        songChooserNode: "#songchooser",
+        dezzerNode: "#dezzerNode"
+      });
+    </script>
   </body>
 </html>
