@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Score</title>
+    <script src="score.js" type="text/javascript" />
+  </head>
+  <body>
+
+    <script type="text/javascript">
+      var score = new Score();
+      score.onChanged(function(){
+        document.querySelector('#score').innerHTML = score
+      }) ;
+
+      setTimeout(function(){ score.inc(Math.random() * 100) }, 200) ;
+    </script>
+  </body>
+</html>
