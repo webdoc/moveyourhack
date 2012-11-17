@@ -69,7 +69,7 @@
             // get its analytics from echonest.
             function handleSongPlayerReady(deezerId, callback){
               var song = new Song(deezerId);
-              var timeline = new SongTimeline(song, 100);
+              var timeline = new SongTimeline(song, 500);
               timeline.init().done(function(){
                 var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
                 timelineDisplay.render(callback);
