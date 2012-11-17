@@ -1,0 +1,168 @@
+
+<!doctype HTML>
+<html>
+<head>
+    <!-- http://evanw.github.com/glfx.js/ -->
+    <script src="./glfx.js"></script>
+    <title>
+        Pixelate
+    </title>
+
+</head>
+
+<body>
+
+
+
+
+
+<script>
+var WIDTH = window.innerWidth;
+var HEIGHT = window.innerHeight;
+var canvas = document.createElement('canvas');
+canvas.width = WIDTH;
+canvas.height = HEIGHT;
+canvas.style.position = 'absolute';
+canvas.style.top = '0px';
+canvas.style.left = '0px';
+
+var ctx = canvas.getContext('2d');
+document.body.appendChild(canvas);
+
+ctx.fillStyle = '#000';
+ctx.font = '42px Arial';
+ctx.fillText( 'PLEASE, Allow us to use your webcam.', WIDTH / 2 - 300, HEIGHT / 2);
+
+
+var CAPTURE = 0;
+function hasGetUserMedia() {
+  // Note: Opera is unprefixed.
+  return !!(navigator.getUserMedia || navigator.webkitGetUserMedia ||
+            navigator.mozGetUserMedia || navigator.msGetUserMedia);
+}
+
+
+  var onFailSoHard = function(e) {
+    alert('Your browser don t support this experiment. Suggess : try Chrome');
+  };
+
+ window.URL = window.URL || window.webkitURL;
+navigator.getUserMedia  = navigator.getUserMedia || navigator.webkitGetUserMedia ||
+                          navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+var video = document.createElement('video');
+
+
+if (navigator.getUserMedia) {
+    console.log('ask');
+  navigator.getUserMedia({audio: true, video: true}, function(stream) {
+    video.src = window.URL.createObjectURL(stream);
+    
+    console.log(video.videoWidth);
+
+    APP.videoWidth = 64;
+    APP.videoHeight = 48;
+    
+    APP.frontCanvas = document.createElement('canvas');
+    APP.frontCanvas.width = APP.videoWidth;
+    APP.frontCanvas.height = APP.videoHeight * 2;
+    APP.ctx = APP.frontCanvas.getContext('2d');
+
+
+    APP.comp = [];
+    run();
+  }, onFailSoHard);
+} else {
+  alert('fail');
+}
+
+var APP = {};
+
+var canvas = null;
+
+
+var texture = null;
+requestAnimFrame = (function() {
+  return window.requestAnimationFrame ||
+     window.webkitRequestAnimationFrame ||
+     window.mozRequestAnimationFrame ||
+     window.oRequestAnimationFrame ||
+     window.msRequestAnimationFrame ||
+     function(/* function FrameRequestCallback */ callback, /* DOMElement Element */ element) {
+       window.setTimeout(callback, 1000/60);
+     };
+})();
+
+var videoCanvas = document.createElement('canvas');
+videoCanvas.width = 64;
+videoCanvas.height = 48;
+var videoCtx = videoCanvas.getContext('2d');
+
+function renderStep1()
+{
+
+
+   requestAnimFrame(renderStep1);
+
+    videoCtx.drawImage(video,0,0, 64, 48);
+    APP.ctx.drawImage(videoCanvas, 0, 0);
+    texture.loadContentsOf(APP.frontCanvas);
+    canvas.draw(texture);
+    canvas.mirror();
+    canvas.move();
+    canvas.update();
+   
+    APP.ctx.drawImage(videoCanvas, 0, 48);
+    render();
+
+  //  ctx.drawImage(canvas, WIDTH - 64 ,0, 64, 48);
+   
+}
+
+function render()
+{
+  videoCtx.drawImage(canvas,0,0);
+  var data = videoCtx.getImageData(0,0,64,48).data;
+
+  ctx.fillStyle = '#000';
+  ctx.globalAlpha = 0.2;
+  ctx.fillRect(0,0,WIDTH, HEIGHT);
+  ctx.globalAlpha = 1.0;
+  var x = 0;
+ 
+  while (x < 64)
+  {
+    var y =0;
+    while (y < 48)
+    {
+      if (data[x * 4 + y * 64 * 4] > 120 )
+      {
+        ctx.fillStyle = '#8d1';
+        ctx.fillRect(x * WIDTH / 64, y * HEIGHT / 48, WIDTH / 64 - 1 | 0, HEIGHT / 48 - 1 | 0);
+      }
+      ++y;
+    }
+    ++x;   
+  }
+}
+
+
+ run = function() {
+
+    canvas = fx.canvas();
+    texture = canvas.texture(APP.frontCanvas);
+
+    CAPTURE = 0;
+    video.play();
+    
+    renderStep1();
+
+      
+ 
+};
+
+    
+</script>
+
+}(document, 'script', 'facebook-jssdk'));</script>
+</body></html>
