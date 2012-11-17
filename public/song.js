@@ -1,20 +1,22 @@
 Song = function(artist,songName){
-	this.artist = artist;
-	this.songName = songName;
+	if (arguments.length === 1) {
+		this.deezerID = artist;
+	}
+	else {
+		this.artist = artist;
+		this.songName = songName;
+	}
 	return this;
 };
 
 Song.prototype.getProfile = function() {
-	var url = "http://developer.echonest.com/api/v4/song/search?api_key=FILDTEOIK2HBORODV&format=json&results=1&artist=" + encodeURI(this.artist) + "&title=" + encodeURI(this.songName);
-	var query = jQuery.ajax({
-		url: url,
-		dataType: "json"
-	});
 	var result = jQuery.Deferred();
-	query.done(function(data){
-		console.log(data);
-		var songsId = data.response.songs[0].id;
-		var profileUrl = "http://developer.echonest.com/api/v4/song/profile?api_key=FILDTEOIK2HBORODV&format=json&id=" + songsId + "&bucket=audio_summary";	
+	var getProfileFromId = function(id, trackId) {
+		var idParam = "id";
+		if (trackId) {
+			idParam = "track_id";
+		}
+		var profileUrl = "http://developer.echonest.com/api/v4/song/profile?api_key=FILDTEOIK2HBORODV&format=json&" + idParam + "=" + id + "&bucket=audio_summary";	
 		jQuery.ajax({
 			url: profileUrl,
 			dataType: "json"
@@ -30,7 +32,22 @@ Song.prototype.getProfile = function() {
 				result.resolve(resultData);
 			})
 		})
-		
-	});
+	}
+	if (this.deezerID) {
+		getProfileFromId("deezer:track:"+ this.deezerID, true);
+	}else {
+		var url;
+	 	url = "http://developer.echonest.com/api/v4/song/search?api_key=FILDTEOIK2HBORODV&format=json&results=1&artist=" + encodeURI(this.artist) + "&title=" + encodeURI(this.songName);
+        var query = jQuery.ajax({
+			url: url,
+			dataType: "json"
+	    });
+
+		query.done(function(data){
+			console.log(data);
+			var songsId = data.response.songs[0].id;
+			getProfileFromId(songsId);
+		});	 	
+	}	
 	return result;
 };
