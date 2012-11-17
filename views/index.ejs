@@ -17,12 +17,20 @@
   <body>
     <div class="container">
       <div class="row-fluid">
+        <div class="span12">
+          <% if(!auth.user) { %>
+            <a href="/auth/facebook">Login with Facebook</a>
+          <% } else { %>
+            <a href="/logout">Logout</a>
+          <% } %>
+        </div>
+      </div>
+      <div class="row-fluid">
         <div class="span12"><div id="dz-root"></div></div>
       </div>
       <div class="row-fluid">
         <div class="span12">
           <h1>Move Your Hack</h1>
-          <div><a href="/auth/facebook">Login with Facebook</a></div>
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
@@ -51,20 +59,20 @@
 
             chooser.done(function(id){
               console.log('Done' + id);
-              DZ.player.playTracks([id], function(){ 
-                handleSongPlayerReady(id);
+              handleSongPlayerReady(id, function(){
+                DZ.player.playTracks([id], function(){   
+                });                              
               });
             });
 
             // After the song is loaded in Deezer, go for more fun and
             // get its analytics from echonest.
-            function handleSongPlayerReady(deezerId){
+            function handleSongPlayerReady(deezerId, callback){
               var song = new Song(deezerId);
               var timeline = new SongTimeline(song, 100);
               timeline.init().done(function(){
-                DZ.player.seek(0);
                 var timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
-                timelineDisplay.render();
+                timelineDisplay.render(callback);
               });
             }
           </script>
