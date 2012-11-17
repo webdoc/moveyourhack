@@ -36,7 +36,13 @@ function SongChooser(options){
 
   this.done = function(func){
     deferred.done(func) ;
-  }
+  };
+
+  this.autoload = function(query){
+    jQuery('input', options.songChooserNode).attr('value', query);
+    if(!query) { return }
+    DZ.api('search?q=' + query + '&order=RANKING', handleSearchResult) ;
+  };
 
   var initialize = function(options) {
     jQuery(options.songChooserNode).html(
