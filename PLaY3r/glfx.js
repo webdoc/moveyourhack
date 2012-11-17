@@ -2266,11 +2266,12 @@ function mirror() {
  * @description      Provides additive brightness and multiplicative contrast control.
  * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
  */
-function move() {
+function move(para) {
     gl.move = gl.move || new Shader(null, '\
         uniform sampler2D texture;\
         uniform float brightness;\
         varying vec2 texCoord;\
+        uniform float para; \
         void main() {\
             vec4 color = texture2D(texture, texCoord);\
             if (texCoord.y < 0.5)\
@@ -2279,7 +2280,7 @@ function move() {
                 float d = abs(color2.r - color.r) +  abs(color2.g - color.g) +  abs(color2.b - color.b);\
                 d = d * 1.5;\
                 color = vec4(d,d,d,1.0);\
-                if (d < 0.5)\
+                if (d < para)\
                 {\
                     color = vec4(0.0,0.0,0.0,1.0);\
                 }\
@@ -2287,7 +2288,7 @@ function move() {
             gl_FragColor = color;\
         }\
     ');
-    simpleShader.call(this, gl.move, { });
+    simpleShader.call(this, gl.move, { para : para});
 
     return this;
 }
