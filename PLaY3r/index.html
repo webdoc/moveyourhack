@@ -10,17 +10,23 @@
 		<script>
 
 
-		// Require : requestAnimFrame
-			   window.requestAnimFrame = (function(){
-			      return  window.requestAnimationFrame       || 
-			              window.webkitRequestAnimationFrame || 
-			              window.mozRequestAnimationFrame    || 
-			              window.oRequestAnimationFrame      || 
-			              window.msRequestAnimationFrame     || 
-			              function( callback ){
-			                window.setTimeout(callback, 1000 / 60);
-			              };
-			    })();
+		// Hacky, look away
+		window.requestAnimFrame = (function(){
+		return  window.requestAnimationFrame       || 
+		      window.webkitRequestAnimationFrame || 
+		      window.mozRequestAnimationFrame    || 
+		      window.oRequestAnimationFrame      || 
+		      window.msRequestAnimationFrame     || 
+		      function( callback ){
+		        window.setTimeout(callback, 1000 / 60);
+		      };
+		})();
+
+		window.URL = window.URL || window.webkitURL;
+		navigator.getUserMedia  = navigator.getUserMedia || navigator.webkitGetUserMedia ||
+		navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+		// hack OVER
 
 
 		function Game()
@@ -31,8 +37,24 @@
 			this.ctx = null;
 			this.RUN = 0;
 
+			this.fxCanvas = null;
+			this.fxCtx = null;
+			this.texture = null;
+
+			this.videoCanvas = null;
+			this.videoCtx = null;
+
+			this.data = null;
+
+			this.map = [];
+			this.intensity = 0;
+
+			this.score = 0;
+
 			this.init = function()
 			{
+				this.score = 0;
+
 				this.WIDTH = window.innerWidth;
 				this.HEIGHT = window.innerHeight;
 				this.canvas = document.createElement('canvas');
@@ -46,12 +68,35 @@
 				this.canvas.height = this.HEIGHT;
 				document.body.appendChild(this.canvas);
 				this.ctx = this.canvas.getContext('2d');
+			
+				this.videoCanvas = document.createElement('canvas');
+				this.videoCanvas.width = 64;
+				this.videoCanvas.height = 48 * 2;
+				this.videoCtx = this.videoCanvas.getContext('2d');
+			
+
+				this.map = [];
+				var i = 0;
+				while (i < 64)
+				{
+					this.map[i] = [];
+					var j = 0;
+					while (j < 48)
+					{
+						this.map[i][j] = 0;
+						++j;
+					}
+					++i;
+				}
 			}
 
 			this.start = function()
 			{
 				this.RUN = 1;
+				this.fxCanvas = fx.canvas();
+				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
+
 			}
 
 			this.stop = function()
@@ -59,20 +104,151 @@
 				this.RUN = 0;
 			}
 
-			this.render = function()
+
+			this.renderPixel = function(update)
 			{
-				
+				var data = this.data;
+				var ctx = this.ctx;
+				var x = 0;
+				ctx.fillStyle = '#ff0';
+				ctx.beginPath();
+
+				var X = this.WIDTH / 64;
+				var Y = this.HEIGHT / 48;
+				while (x < 64)
+				{
+					var y =0;
+					while (y < 48)
+					{
+					  if (this.map[x][y])
+					  {
+					   
+					  	this.map[x][y]--;
+					  	
+						ctx.moveTo(x * X, y * Y);
+						ctx.arc(x * X, Y * y, X/3, 0, Math.PI * 2, true);
+					  }
+					  ++y;
+					}
+					++x;   
+				}
+				ctx.fill();
 			}
 
-			this.run = function()
+			this.renderScore = function()
 			{
-				this.render();	
-				if (this.RUN)
-					requestAnimFrame(this.run);
+				this.ctx.font = '50px Arial';
+				this.ctx.fillText(this.score + ' ', this.WIDTH  - 200, 50);
+			}
+
+			this.render = function()
+			{		
+				var ctx = this.ctx;
+				ctx.globalAlpha = 0.2;
+				ctx.fillStyle = '#000';
+				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+				ctx.globalAlpha = 1.0;
+				//ctx.drawImage(this.videoCanvas, 0 ,0);
+				this.renderPixel();
+				this.renderScore();
+			}
+
+			this.analyze = function()
+			{
+				this.videoCtx.drawImage(userMedia.video,0,0, 64, 48);
+				this.texture.loadContentsOf(this.videoCanvas);
+			    this.fxCanvas.draw(this.texture);
+    			this.fxCanvas.mirror();
+   				this.fxCanvas.move();
+    			this.fxCanvas.update();
+			    this.videoCtx.drawImage(this.fxCanvas, 0, 0);
+			    this.intensity = this.compute();
+			    // TODO : true scoring;
+			    this.score += this.intensity * 1000 | 0;
+			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
+			}
+
+			this.compute = function()
+			{
+				this.data = this.videoCtx.getImageData(0,0,64,48).data;
+				var data = this.data;
+
+				var intensity = 0;
+				var x = 0;
+				while (x < 64)
+				{
+					var y =0;
+					while (y < 48)
+					{
+					  if (data[x * 4 + y * 64 * 4] > 120)
+					  {
+					    intensity++;
+					    this.map[x][y] = 6;
+					  }
+					  ++y;
+					}
+					++x;   
+				}
+				return intensity / 3072;
+			}
+
+			this.run = function(delta)
+			{
+				//console.log(delta);
+				game.analyze();
+				game.render();	
+				if (game.RUN)
+					requestAnimFrame(game.run);
 			}
 		}
+		var c = 0;
 		var game = new Game();
 		game.init();
+
+
+
+		function UserMedia()
+		{
+			this.hasGetUserMedia = function() 
+			{
+			  	// Note: Opera is unprefixed.
+			  	return !!(navigator.getUserMedia || navigator.webkitGetUserMedia ||
+			            navigator.mozGetUserMedia || navigator.msGetUserMedia);
+			}
+
+			this.onFailSoHard = function(e)
+			{
+				console.log('Reeeejected!', e);
+			};
+
+			this.video = document.createElement('video');
+
+			this.init = function()
+			{
+				if (navigator.getUserMedia)
+				{
+					navigator.getUserMedia(
+						{audio: true, video: true}, 
+						function(stream) 
+						{
+							userMedia.video.src = window.URL.createObjectURL(stream);
+				    		userMedia.video.play();
+				    		game.start();
+				  		}, 
+				  		this.onFailSoHard
+				  	);
+				} 
+				else
+				{
+			  		alert('fail');
+				}
+			}
+		}
+		var userMedia = new UserMedia();
+		userMedia.init();
+
+		
+
 
 		</script>
 	</body>
