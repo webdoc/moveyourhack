@@ -51,3 +51,13 @@ SongTimeline.prototype.init = function() {
 	}.bind(this));
 	return result;
 }
+
+SongTimeline.prototype.getResult = function() {
+	var count = this.beatTimeline.length;
+	var i;
+	var result = [];
+	for (i = 0; i < count; i++) {
+		result[i] = (this.beatTimeline[i] + this.tatumsTimeline[i] + this.sectionsTimeline[i]) / 3
+	}
+	return result;
+}

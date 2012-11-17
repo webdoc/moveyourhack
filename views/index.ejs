@@ -50,7 +50,6 @@
 
       DZ.Event.subscribe('player_position', function(args, evt_name){
         console.log(args);
-        timelineDisplay.updateTime(args[0], 10);
       });
 
       var chooser = new SongChooser({
@@ -62,6 +61,8 @@
         console.log('Done' + id);
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
+            timelineDisplay.run();
+            DZ.player.seek(0);
           });
         });
       });
