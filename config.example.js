@@ -6,7 +6,7 @@ config.facebook = {};
 config.mongodb = {};
 
 config.web.host = process.env.WEB_HOST || 'moveyourhack.dev';
-config.web.port = process.env.WEB_PORT || 3000;
+config.web.port = process.env.WEB_PORT || 80;
 config.cookie.secret = process.env.WEB_COOKIE_SECRET || 'aSecretKey';
 config.facebook.appId = process.env.FACEBOOK_APP_ID || 'appId';
 config.facebook.appSecret = process.env.FACEBOOK_APP_SECRET || 'appSecret';
