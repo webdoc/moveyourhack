@@ -17,6 +17,7 @@
 
 
 <script>
+
 var WIDTH = window.innerWidth;
 var HEIGHT = window.innerHeight;
 var canvas = document.createElement('canvas');
@@ -25,6 +26,8 @@ canvas.height = HEIGHT;
 canvas.style.position = 'absolute';
 canvas.style.top = '0px';
 canvas.style.left = '0px';
+
+
 
 var ctx = canvas.getContext('2d');
 document.body.appendChild(canvas);
@@ -113,10 +116,61 @@ function renderStep1()
     canvas.update();
    
     APP.ctx.drawImage(videoCanvas, 0, 48);
-    render();
+    var score = analyse();
+    
+    var i = 0;
+    var N = 0;
+    while (i < NORMALIZER.length)
+    {
+      N = NORMALIZER[i++]; 
+    }
 
-  //  ctx.drawImage(canvas, WIDTH - 64 ,0, 64, 48);
-   
+    var s = score - N / (NORMALIZER.length - 1);
+
+    if (NORMALIZER.length > 10)
+      NORMALIZER.splice(0, 1); 
+    NORMALIZER.push(score);
+
+    score = Math.abs(s);
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0, WIDTH, 400);
+    ctx.fillStyle = '#8d1';
+    ctx.fillText(score, 200, 200);
+    ctx.fillRect(CURRENT, 400, 4, score * 1000);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(CURRENT, 400 + score * 1000 , 4, 1000);
+    CURRENT += 4;
+    if (CURRENT > WIDTH)
+      CURRENT = 0;
+}
+
+var NORMALIZER = [];
+
+var CURRENT = 0;
+function analyse()
+{
+  // Data analyse
+  videoCtx.drawImage(canvas,0,0);
+  var data = videoCtx.getImageData(0,0,64,48).data;
+
+  var intensity = 0;
+  var x = 0;
+  while (x < 64)
+  {
+    var y =0;
+    while (y < 48)
+    {
+      if (data[x * 4 + y * 64 * 4] > 120)
+      {
+        intensity++;
+      }
+      ++y;
+    }
+    ++x;   
+  } 
+
+  return intensity / 3072;
 }
 
 function render()
@@ -164,5 +218,4 @@ function render()
     
 </script>
 
-}(document, 'script', 'facebook-jssdk'));</script>
 </body></html>
