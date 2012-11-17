@@ -5,7 +5,7 @@ Song = function(artist,songName){
 };
 
 Song.prototype.getProfile = function() {
-	var url = "http://developer.echonest.com/api/v4/song/search?api_key=FILDTEOIK2HBORODV&format=json&results=1&artist=daft%20punk&title=aerodynamic";
+	var url = "http://developer.echonest.com/api/v4/song/search?api_key=FILDTEOIK2HBORODV&format=json&results=1&artist=" + encodeURI(this.artist) + "&title=" + encodeURI(this.songName);
 	var query = jQuery.ajax({
 		url: url,
 		dataType: "json"

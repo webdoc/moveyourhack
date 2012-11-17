@@ -6,7 +6,7 @@
     <script src="song_timeline.js" type="text/javascript"></script>
     <script src="song_timeline_display.js" type="text/javascript"></script>    
     <script type="text/javascript">
-      var song = new Song();
+      var song = new Song("daft punk", 'around the world');
       var timeline = new SongTimeline(song, 100);
       timeline.init().done(function(){
         var timelineDisplay = new SongTimelineDisplay(timeline, jQuery("#canvas")[0]);
