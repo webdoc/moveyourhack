@@ -19,13 +19,35 @@ SongTimelineDisplay.prototype.render = function(callback) {
 	callback.apply(this, []);
 }
 
-
-
+var TICK = 0;
+var SCALE = 0;
+var RUN = 0;
+var _CTX = 0;
+var UPPED = 0;
 SongTimelineDisplay.prototype.updateTime = function(tick, scale)
 {
+    SCALE = scale;
+    if (!RUN)
+        this.run();
     TICK = tick;
+    _CTX = this.ctx;
     this.ctx.fillStyle ='#000'
     this.ctx.fillRect(0, 100, tick * scale, 10);
+    UPPED = 1;
 }
+
+
+
+SongTimelineDisplay.prototype.run = function()
+{
+    if (!UPPED && TICK != 0)
+        TICK += 0.02;
+    else
+        UPPED = 0;
+    timelineDisplay.ctx.fillStyle ='#000';
+    timelineDisplay.ctx.fillRect(0, 100, TICK * SCALE, 10);
+    setTimeout(timelineDisplay.run, 20);
+}
+
 
 
