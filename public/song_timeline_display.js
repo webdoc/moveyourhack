@@ -6,7 +6,7 @@ SongTimelineDisplay = function(timeline, canvas) {
 	this.HEIGHT = 500;
 }
 
-SongTimelineDisplay.prototype.render = function() {
+SongTimelineDisplay.prototype.render = function(callback) {
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0,0, this.WIDTH, this.HEIGHT);
     var i = 0, count = this.timeline.beatTimeline.length;
@@ -16,5 +16,16 @@ SongTimelineDisplay.prototype.render = function() {
     	var medium = (this.timeline.beatTimeline[i] + this.timeline.tatumsTimeline[i] + this.timeline.sectionsTimeline[i]) / 3
     	this.ctx.fillRect(i,0, 1, this.HEIGHT * medium);
     }
-
+	callback.apply(this, []);
 }
+
+
+
+SongTimelineDisplay.prototype.updateTime = function(tick, scale)
+{
+    TICK = tick;
+    this.ctx.fillStyle ='#000'
+    this.ctx.fillRect(0, 100, tick * scale, 10);
+}
+
+
