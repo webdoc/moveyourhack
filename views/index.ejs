@@ -50,7 +50,7 @@
 
             DZ.Event.subscribe('player_position', function(args, evt_name){
               console.log(args);
-              timelineDisplay.updateTime(args[0]);
+              timelineDisplay.updateTime(args[0], 10);
             });
 
             var chooser = new SongChooser({
