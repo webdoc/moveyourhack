@@ -46,7 +46,7 @@
 
       DZ.init({
         appId  : '108771',
-        channelUrl : 'http://<%= host %>/deezer/channel.html',
+        channelUrl : 'http://<%= config.web.host %>/deezer/channel.html',
         player : {
           onload : function(){
             console.log(arguments);
