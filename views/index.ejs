@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <title><%= title %></title>
+    <link href='http://fonts.googleapis.com/css?family=Monoton' rel='stylesheet' type='text/css'>
     <link href='http://fonts.googleapis.com/css?family=Poiret+One' rel='stylesheet' type='text/css' />
     <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet" />
     <link rel='stylesheet' href='/stylesheets/style.css' />
@@ -40,7 +41,8 @@
     <div class="container">
       <div class="row-fluid">
         <div class="span12">
-          <h1>danceparty.me</h1>
+          <h1 style='font-family : Monoton; color : #ff0'>Dance Party Me</h1>
+
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
@@ -51,6 +53,37 @@
 
     <div id="dz-root"></div>
     <script type="text/javascript">
+      function renderSongChooser(){
+        var chooser = new SongChooser({
+          songChooserNode: "#songchooser",
+          searchResultNode: "#searchResults"
+        });
+
+        chooser.done(function(id){
+          if(window.history){
+            history.pushState({}, "Playing", "#!songPlaying")
+          }
+          console.log('Done' + id);
+          handleSongPlayerReady(id, function(){
+            DZ.player.playTracks([id], false, function(){
+              // uncomment to start viewer
+              setTimeout("DZ.player.pause();", 1000);
+              launchGame(timeline, DZ.player);
+            });
+          });
+        });
+        return chooser ;
+      }
+
+      if(window.history) {
+        window.onpopstate = function(event){
+          renderSongChooser();
+          if(game){
+            $(game.canvas).remove();
+          }
+        };
+      }
+
 
       DZ.init({
         appId  : '108771',
@@ -62,28 +95,13 @@
         }
       });
 
-      DZ.Event.subscribe('player_position', function(args, evt_name){
-        console.log(args);
-      });
+      //DZ.Event.subscribe('player_position', function(args, evt_name){
+      //  console.log(args);
+      //});
 
-      var chooser = new SongChooser({
-        songChooserNode: "#songchooser",
-        searchResultNode: "#searchResults"
-      });
+      var chooser = renderSongChooser();
 
-      chooser.done(function(id){
-        console.log('Done' + id);
-        handleSongPlayerReady(id, function(){
-          DZ.player.playTracks([id], function(){
-            // uncomment to start viewer
-            setTimeout("DZ.player.pause();", 1000);
-
-            launchGame(timeline, DZ.player);
-          });
-        });
-      });
-
-      chooser.autoload('aerodynamic');
+      chooser.autoload('elephunk');
 
       // After the song is loaded in Deezer, go for more fun and
       // get its analytics from echonest.
@@ -120,5 +138,20 @@
         ref.parentNode.insertBefore(js, ref);
       }(document, false));
     </script>
+
+
+    <script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-36430225-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
   </body>
 </html>
