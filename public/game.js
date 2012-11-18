@@ -169,9 +169,9 @@
 				var ctx = this.ctx;
 				var x = 0;
 
-				if (this.intensity < 0.02)
+				if (this.intensity < 0.2)
 					ctx.fillStyle = '#f00';
-				else if (this.intensity < 0.08)
+				else if (this.intensity < 0.5)
 					ctx.fillStyle = '#ff0';
 				else
 					ctx.fillStyle = '#0f0';
