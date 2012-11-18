@@ -16,7 +16,6 @@
 
 		// hack OVER
 
-
 		function Game()
 		{
 			this.WIDTH = 0;
@@ -43,11 +42,14 @@
 
 			this.SPRITE = [];
 
-			this.soundData = null;
+			this.COMMENTS = [];
 
-			this.init = function(soundData)
+			this.soundData = null;
+			this.soundPlayer = null;
+			this.init = function(soundData, soundPlayer)
 			{
 				this.soundData = soundData;
+				this.soundPlayer = soundPlayer;
 				this.score = 0;
 
 				this.WIDTH = window.innerWidth;
@@ -109,6 +111,7 @@
 			this.stop = function()
 			{
 				this.RUN = 0;
+				this.soundPlayer.player.pause();
 			}
 
 			this.pushParticles = function()
@@ -123,12 +126,12 @@
 					var y = 0;
 					while (y < 48)
 					{
-					  if (this.map[x][y])
+					  if (this.PARTICLES.length < 400 && this.map[x][y])
 					  {
 					  	this.map[x][y]--;
 
 					  	var angle = Math.random() * Math.PI*2;
-						var speed = Math.random() * 10.;
+						var speed = Math.random() * 12.;
 						var p =
 						{
 							x : x * X, 
@@ -136,7 +139,7 @@
 							xs: Math.sin(angle) * speed,
 							ys: Math.cos(angle) * speed,
 							s  : Math.random() * 40 | 0,
-							l : 12
+							l : 50
 						}
 						this.PARTICLES.push(
 							p
@@ -154,12 +157,13 @@
 				var ctx = this.ctx;
 				var x = 0;
 
-				if (this.intensity < 0.005)
-					ctx.fillStyle = '#800';
-				else if (this.intensity < 0.02)
+				if (this.intensity < 0.01)
+					ctx.fillStyle = '#f00';
+				else if (this.intensity < 0.03)
 					ctx.fillStyle = '#ff0';
-				else 
+				else
 					ctx.fillStyle = '#0f0';
+				// ctx.fillStyle = '#fff';
 				ctx.beginPath();
 
 				var X = this.WIDTH / 64;
@@ -187,18 +191,61 @@
 			 	var ctx = this.ctx;
 			 	var i = 0;
 
+			 	var X = this.WIDTH / 64;
+				ctx.beginPath();
 			 	while (i < this.PARTICLES.length)
 			 	{
 			 		var p = this.PARTICLES[i];
 			 		p.x += p.xs;
 			 		p.y += p.ys;
-			 		p.s = Math.random() * 40 | 0;
+			 		//p.s = Math.random() * 40 | 0;
 			 		p.l--;
-			 		ctx.drawImage(this.SPRITE[Math.random() * 2 | 0], p.x, p.y, p.s, p.s);
+			 		// ctx.moveTo(p.x, p.y);
+					//ctx.arc(p.x, p.y, X /3,0, Math.PI * 2, true);
+			 		 ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
 			 		if (p.l ==0)
 			 			this.PARTICLES.splice(i--, 1);
 			 		++i;
 			 	}
+			 	ctx.fill();
+			}
+
+			this.renderTexts = function()
+			{
+				var spacing = 8 ;
+				var letterSpacing = 5 ;
+				var posY = 100 ;
+				for(var ts = this.COMMENTS.length -1; ts >= 0; ts--){
+					var comment = this.COMMENTS[ts];
+					comment.ttl --;
+					var posX = 150 ;
+					if(comment.ttl == 0){
+						this.COMMENTS.shift();
+					}
+					for(var t = 0; t < comment.text.length; t++){
+						var letter = alphabet[comment.text[t]]
+						for(var i = 0; i < letter.length; i++){
+							for(var j = 0; j < letter[i].length; j++){
+								if(letter[i][j]){
+									this.PARTICLES.push({
+										x : posX + j*spacing, 
+										y : posY + comment.y + i*spacing,                      
+										xs: 0,
+										ys: 4,
+										s  : 6,
+										l : 10 
+									});
+								}
+								
+							}	
+						}
+						posX += letterSpacing + letter.length * spacing;
+					}
+					if(comment.ttl < 20){
+						comment.y += 8;
+					}
+					posY += letterSpacing + 12 * spacing;
+				}	
 			}
 
 			this.renderScore = function()
@@ -247,21 +294,24 @@
 			this.render = function()
 			{		
 				var ctx = this.ctx;
-				ctx.globalAlpha = .1;
+				ctx.globalAlpha = .2;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
-				ctx.globalAlpha = 1.0;
+				ctx.globalAlpha = 1.0
 				//ctx.drawImage(this.videoCanvas, 0 ,0);
-				// if (Math.random() > 0.01)
-					this.renderPixel();
-			//	else
-			//		this.pushParticles();
-			//	this.renderParticles();
+				
+				this.renderPixel();
+				if (this.intensity == 0)
+				{
+					this.pushParticles();
+					this.renderParticles();
+				}
+				this.renderTexts();
 				this.renderScore();
                 this.renderVisualizer();
 			}
 
-			this.analyze = function()
+			this.analyze = function(now)
 			{
 				this.videoCtx.drawImage(userMedia.video,0,0, 64, 48);
 				this.texture.loadContentsOf(this.videoCanvas);
@@ -271,11 +321,31 @@
     			this.fxCanvas.update();
 			    this.videoCtx.drawImage(this.fxCanvas, 0, 0);
 			    this.intensity = this.compute();
+			   // console.log(now);
+			    //console.log(this.intensity + ' --  ' + this.soundData[now])
 			    // TODO : true scoring;
-			    this.score += this.intensity * 1000 | 0;
+			    var l = 0;
+			    if (this.soundData[now]) 
+			     l = 0.2 - Math.abs(this.intensity - this.soundData[now]);
+			    console.log(l);
+			    this.score += (l> 0 ) ?  l * 1000 | 0: 0;
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
+				if (!this.soundData[now])
+					this.gameOver();
 			}
 
+			this.gameOver = function()
+			{
+				/*this.RUN = 0;
+
+				ctx.fillStyle = '#000';
+				ctx.globalAlpha = 0.5;
+				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+				ctx.fillStyle = '#fff';
+				ctx.globalAlpha = 0.0;
+				ctx.font = '80px Arial';
+				ctx.fillText(this.score, this.WIDTH / 2 - 300, this.HEIGHT / 2);
+			  */}
 			this.compute = function()
 			{
 				this.data = this.videoCtx.getImageData(0,0,64,48).data;
@@ -299,14 +369,20 @@
 					}
 					++x;   
 				}
-				console.log(hash);
+		//		console.log(hash);
 				return intensity / 3072;
+			}
+
+			this.addComment = function(text){
+				this.COMMENTS.push({text: text, ttl: 100, y: 10});
 			}
 
 			this.run = function(delta)
 			{
+				var now = new Date().getTime();
 				//console.log(delta);
-				game.analyze();
+				game.analyze((now - TIME ) / 100 | 0);
+				if (game.RUN);
 				game.render();	
 				if (game.RUN)
 					requestAnimFrame(game.run);
@@ -341,6 +417,7 @@
 						{audio: true, video: true}, 
 						function(stream) 
 						{
+							console.log('oh');
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
 				    		game.start(soundPlayer);
@@ -356,11 +433,19 @@
 		}
 		var userMedia = new UserMedia();
 
+		var TIME = 0;
 
 		function launchGame(timeline, soundPlayer)
 		{
-			console.log('Let s Dance :)');
-			game.init(timeline.getResult());
+
+			TIME = new Date().getTime();
+			console.log(timeline.getResult());
+			soundPlayer.pause();
+			soundPlayer.seek(0);
+            game.init(timeline.getResult());
             game.preRenderVisualizer(timeline);
-			userMedia.init(soundPlayer);
+            userMedia.init(soundPlayer);
+
+			// COMMENTS
+			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
 		}
