@@ -50,7 +50,7 @@
           handleSongPlayerReady(id, function(){
             DZ.player.playTracks([id], false, function(){
               // uncomment to start viewer
-              // setTimeout("DZ.player.pause();", 1000);
+              setTimeout("DZ.player.pause();", 1000);
               launchGame(timeline, DZ.player);
             });
           });
