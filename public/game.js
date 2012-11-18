@@ -259,7 +259,7 @@
 			this.renderScore = function()
 			{
 				this.ctx.font = '50px Monoton';
-				this.ctx.fillText(this.score + ' ', this.WIDTH  - 300, 50);
+				this.ctx.fillText(this.score + ' ', this.WIDTH  - 300, 80);
 			}
 
             this.preRenderVisualizer = function(timeline) {
@@ -278,7 +278,7 @@
                 m_context.strokeStyle = '#fff';
                 for (; i < count ; i++) {
                     var value = result[i];
-                    m_context.globalAlpha = 0.6;
+                    m_context.globalAlpha = 1.0;
                     m_context.fillStyle = '#fff';
                     m_context.fillRect(200 + i* 5,150 - this.visualizerCanvas.height * value * 2, 2, this.visualizerCanvas.height * value * 2);
                     m_context.strokeRect(200 + i* 5,150 - this.visualizerCanvas.height * value * 2, 2, this.visualizerCanvas.height * value * 2);
@@ -294,9 +294,9 @@
                     var distanceInpx = distance * this.scale / 1000;
                     var lengthOffset = 0;
                     var startOffset =  distanceInpx;
-                    this.ctx.fillStyle = '#0ff';
-                    this.ctx.fillRect(199, this.HEIGHT - 150, 3, 150);
-
+                    this.ctx.globalAlpha = 1.0;
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.fillRect(198, this.HEIGHT - 100, 5, 100);
                     this.ctx.drawImage(this.visualizerCanvas, distanceInpx, 0, this.WIDTH, 150, 0, this.HEIGHT - 150, this.WIDTH, 150);
                    
                     
