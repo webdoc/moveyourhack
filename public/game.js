@@ -126,20 +126,26 @@
 					  {
 					  	this.map[x][y]--;
 
-					  	var angle = Math.random() * Math.PI*2;
-						var speed = Math.random() * 12.;
-						var p =
-						{
-							x : x * X, 
-							y : y * Y,                      
-							xs: Math.sin(angle) * speed,
-							ys: Math.cos(angle) * speed,
-							s  : Math.random() * 40 | 0,
-							l : 50
+				  		var i = 0;
+					  	while (i++ < 10)
+					  	{
+						  	var angle = Math.random() * Math.PI*2;
+							var speed = Math.random() * 12.;
+							
+
+							var p =
+							{
+								x : x * X, 
+								y : y * Y,                      
+								xs: Math.sin(angle) * speed,
+								ys: Math.cos(angle) * speed,
+								s  : Math.random() * 40 | 0,
+								l : 5
+							}
+							this.PARTICLES.push(
+								p
+							);
 						}
-						this.PARTICLES.push(
-							p
-						);
 					  }
 					  ++y;
 					}
@@ -187,6 +193,7 @@
 			 	var ctx = this.ctx;
 			 	var i = 0;
 
+			 	ctx.globalAlpha = 0.5;
 			 	var X = this.WIDTH / 64;
 				ctx.beginPath();
 			 	while (i < this.PARTICLES.length)
@@ -196,14 +203,15 @@
 			 		p.y += p.ys;
 			 		//p.s = Math.random() * 40 | 0;
 			 		p.l--;
-			 		// ctx.moveTo(p.x, p.y);
-					//ctx.arc(p.x, p.y, X /3,0, Math.PI * 2, true);
-			 		 ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
+			 		ctx.moveTo(p.x, p.y);
+					ctx.arc(p.x, p.y, X / 8,0, Math.PI * 2, true);
+			 		 //ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
 			 		if (p.l ==0)
 			 			this.PARTICLES.splice(i--, 1);
 			 		++i;
 			 	}
 			 	ctx.fill();
+			 	ctx.globalAlpha = 1.0;
 			}
 
 			this.renderTexts = function()
@@ -229,7 +237,7 @@
 										xs: 0,
 										ys: 4,
 										s  : 6,
-										l : 10 
+										l : 50 
 									});
 								}
 								
@@ -253,7 +261,7 @@
 			this.render = function()
 			{		
 				var ctx = this.ctx;
-				ctx.globalAlpha = .2;
+				ctx.globalAlpha = .5;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
 				ctx.globalAlpha = 1.0
@@ -265,7 +273,8 @@
 					this.pushParticles();
 					this.renderParticles();
 				}
-				this.renderTexts();
+				//if (Math.random() > 0.99)
+					
 				this.renderScore();
 			}
 
@@ -285,7 +294,7 @@
 			    var l = 0;
 			    if (this.soundData[now]) 
 			     l = 0.2 - Math.abs(this.intensity - this.soundData[now]);
-			    console.log(l);
+			  
 			    this.score += (l> 0 ) ?  l * 1000 | 0: 0;
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
 				if (!this.soundData[now])
@@ -332,7 +341,8 @@
 			}
 
 			this.addComment = function(text){
-				this.COMMENTS.push({text: text, ttl: 100, y: 10});
+				this.COMMENTS.push({text: text, ttl: 1, y: 10});
+				this.renderTexts();
 			}
 
 			this.run = function(delta)
