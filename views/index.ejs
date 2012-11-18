@@ -34,7 +34,7 @@
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
-          <canvas id="canvas" width="2000" height="500"></canvas>
+          <div id="timeline"></div>          
         </div>
       </div>
     </div>
@@ -64,27 +64,26 @@
         console.log('Done' + id);
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
-            setTimeout("timelineDisplay.run()", 1300);
-            console.log('beforeok')
+            // uncomment to start viewer
+            //setTimeout("timelineDisplay.run()", 100);
             DZ.player.seek(0);
-            console.log('ok')
-            launchGame(timelineDisplay.timeline.getResult());
+            launchGame(timeline.getResult(), DZ);
           });
         });
       });
 
       chooser.autoload('aerodynamic');
 
-      // Global sucks but..... IT S HACK DAY!
-       var timelineDisplay = null;
       // After the song is loaded in Deezer, go for more fun and
       // get its analytics from echonest.
       function handleSongPlayerReady(deezerId, callback){
         var song = new Song(deezerId);
-        var timeline = new SongTimeline(song, 200);
+        timeline = new SongTimeline(song, 100);
         timeline.init().done(function(){
-          timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
-          timelineDisplay.render(callback);
+          //uncomment to see viewer
+          //timelineDisplay = new SongTimelineDisplay(timeline);
+          //timelineDisplay.render(callback);
+          callback.apply(this,[]);
         });
       }
     </script>
