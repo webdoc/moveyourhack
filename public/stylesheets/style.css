@@ -10,6 +10,9 @@ h1 {
   font-family: "Poiret One";
   font-size: 96px;
   line-height: 100px;
+  font-weight: normal;
+  font-family : Monoton;
+  color : #ff0;
 }
 
 a {
