@@ -1,9 +1,18 @@
-window.songFacebook = {
-  ditInit: function(){
+if(!window.DanceParty) { window.DanceParty = {}; }
+
+DanceParty.facebook = {
+  didInit: function(){
     this.init = true;
   },
 
+  publishInFeedHandler: function(e) {
+    var modalGO = $('#modal_game_over');
+    this.publishInFeed(modalGO.data('score'));
+  },
+
   publishInFeed: function(score) {
+    if(!this.init) { console.log('Facebook JS SDK not loaded!'); return; }
+
     var obj = {
       method: 'feed',
       redirect_uri: 'http://www.danceparty.me',
