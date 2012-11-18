@@ -24,6 +24,7 @@ Song.prototype.getProfile = function() {
 			console.log(profileData);
 			if(!profileData.response.songs){
 				alert('Whoops, we cannot find song analysis for this one, try again with another track.')
+				renderSongChooser();
 				return;
 			}
 			var analysisUrl = profileData.response.songs[0].audio_summary.analysis_url;

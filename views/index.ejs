@@ -25,7 +25,7 @@
     <div class="container">
       <div class="row-fluid">
         <div class="span12">
-          <h1 style='font-family : Monoton; color : #ff0'>Dance Party Me</h1>
+          <h1>Dance Party Me</h1>
 
           <div id="songchooser"></div>
           <div id="searchResults"></div>
@@ -82,6 +82,10 @@
       //  console.log(args);
       //});
 
+      DZ.Event.subscribe('player_play', function(){
+        console.log("START PLAYING EVENT RECEIVED.");
+      });
+
       var chooser = renderSongChooser();
 
       chooser.autoload('elephunk');
@@ -98,6 +102,8 @@
           callback.apply(this,[]);
         });
       }
+
+
     </script>
     <div id="fb-root"></div>
     <script>

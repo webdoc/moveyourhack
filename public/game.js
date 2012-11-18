@@ -104,6 +104,10 @@
 				this.run();
                 soundPlayer.play();
                 soundPlayer.seek(0);
+                DZ.Event.subscribe('player_paused', function(){
+					        console.log("STOP PLAYING EVENT RECEIVED.");
+					        this.gameOver();
+					      });
                 this.startTime = new Date();
                 this.startTime = this.startTime.getTime();
 			}
