@@ -262,6 +262,7 @@
                 this.visualizerCanvas.height = 150;
                 var m_context = this.visualizerCanvas.getContext("2d");
                 m_context.fillStyle = '#000';
+                m_context.globalAlpha = 0.5;
                 m_context.fillRect(0,0, this.visualizerCanvas.width, this.visualizerCanvas.height);
                 var i = 0, count = timeline.tatumsTimeline.length;
                 var result = timeline.getResult();
@@ -270,7 +271,7 @@
                     var value = result[i];
                     console.log("value", value);
                     m_context.fillStyle = '#c33';
-                    m_context.fillRect(i* 5,0, 5, this.visualizerCanvas.height * value);
+                    m_context.fillRect(i* 5,0, 5, this.visualizerCanvas.height * value * 2);
                 }
             }
 
@@ -281,12 +282,17 @@
                     var distance = currentDate.getTime() - this.startTime;
                     var distanceInpx = distance * this.scale / 1000;
                     var lengthOffset = 0;
+                    var startOffset = 0;
                     if (distanceInpx < 150) {
                         lengthOffset = 150 - distanceInpx;
                     }
-                    this.ctx.drawImage(this.visualizerCanvas, distance * this.scale / 1000, 0, 300 - lengthOffset, 150,this.WIDTH -400 + lengthOffset, this.HEIGHT - 250, 300 - lengthOffset, 150);
+                    else {
+                        startOffset =  (distance * this.scale / 1000) - 150;
+                    }
+                    this.ctx.drawImage(this.visualizerCanvas, startOffset, 0, 300 - lengthOffset, 150,this.WIDTH -400 + lengthOffset, this.HEIGHT - 250, 300 - lengthOffset, 150);
                     this.ctx.strokeStyle = '#8d1';
                     this.ctx.strokeRect(this.WIDTH -400, this.HEIGHT - 250, 300, 150);
+                    this.ctx.strokeStyle = '#ccc';
                     this.ctx.strokeRect(this.WIDTH -250, this.HEIGHT - 250, 1, 150);
                 }
             }
