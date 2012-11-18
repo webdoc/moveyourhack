@@ -317,7 +317,7 @@
 
 		function launchGame(SoundArray, soundPlayer)
 		{
-			console('Let s Dance :)');
+			console.log('Let s Dance :)');
 			game.init(SoundArray);
 			userMedia.init();;
 		}
