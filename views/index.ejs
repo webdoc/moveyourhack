@@ -67,8 +67,8 @@
           DZ.player.playTracks([id], function(){
             // uncomment to start viewer
             //setTimeout("timelineDisplay.run()", 100);
-            DZ.player.seek(0);
-            launchGame(timeline.getResult(), DZ);
+            DZ.player.pause();
+            launchGame(timeline, DZ.player);
           });
         });
       });

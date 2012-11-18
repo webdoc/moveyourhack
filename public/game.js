@@ -93,13 +93,17 @@
 				this.SPRITE.push(image);
 			}
 
-			this.start = function()
+			this.start = function(soundPlayer)
 			{
+                console.log("game start");
 				this.RUN = 1;
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
-
+                soundPlayer.play();
+                soundPlayer.seek(0);
+                this.startTime = new Date();
+                this.startTime = this.startTime.getTime();
 			}
 
 			this.stop = function()
@@ -203,6 +207,43 @@
 				this.ctx.fillText(this.score + ' ', this.WIDTH  - 200, 50);
 			}
 
+            this.preRenderVisualizer = function(timeline) {
+                this.timeline = timeline;
+                this.scale = 1000 / timeline.interval * 5;
+                this.visualizerCanvas = document.createElement('canvas');
+                this.visualizerCanvas.width = 5 * timeline.getResult().length;
+                this.visualizerCanvas.height = 150;
+                var m_context = this.visualizerCanvas.getContext("2d");
+                m_context.fillStyle = '#000';
+                m_context.fillRect(0,0, this.visualizerCanvas.width, this.visualizerCanvas.height);
+                var i = 0, count = timeline.tatumsTimeline.length;
+                var result = timeline.getResult();
+
+                for (; i < count ; i++) {
+                    var value = result[i];
+                    console.log("value", value);
+                    m_context.fillStyle = '#c33';
+                    m_context.fillRect(i* 5,0, 5, this.visualizerCanvas.height * value);
+                }
+            }
+
+            this.renderVisualizer = function()
+            {
+                if (this.startTime) {
+                    var currentDate = new Date();
+                    var distance = currentDate.getTime() - this.startTime;
+                    var distanceInpx = distance * this.scale / 1000;
+                    var lengthOffset = 0;
+                    if (distanceInpx < 150) {
+                        lengthOffset = 150 - distanceInpx;
+                    }
+                    this.ctx.drawImage(this.visualizerCanvas, distance * this.scale / 1000, 0, 300 - lengthOffset, 150,this.WIDTH -400 + lengthOffset, this.HEIGHT - 250, 300 - lengthOffset, 150);
+                    this.ctx.strokeStyle = '#8d1';
+                    this.ctx.strokeRect(this.WIDTH -400, this.HEIGHT - 250, 300, 150);
+                    this.ctx.strokeRect(this.WIDTH -250, this.HEIGHT - 250, 1, 150);
+                }
+            }
+
 			this.render = function()
 			{		
 				var ctx = this.ctx;
@@ -217,6 +258,7 @@
 			//		this.pushParticles();
 			//	this.renderParticles();
 				this.renderScore();
+                this.renderVisualizer();
 			}
 
 			this.analyze = function()
@@ -291,7 +333,7 @@
 
 			this.video = document.createElement('video');
 
-			this.init = function()
+			this.init = function(soundPlayer)
 			{
 				if (navigator.getUserMedia)
 				{
@@ -301,7 +343,7 @@
 						{
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
-				    		game.start();
+				    		game.start(soundPlayer);
 				  		}, 
 				  		this.onFailSoHard
 				  	);
@@ -315,9 +357,10 @@
 		var userMedia = new UserMedia();
 
 
-		function launchGame(SoundArray, soundPlayer)
+		function launchGame(timeline, soundPlayer)
 		{
 			console.log('Let s Dance :)');
-			game.init(SoundArray);
-			userMedia.init();;
+			game.init(timeline.getResult());
+            game.preRenderVisualizer(timeline);
+			userMedia.init(soundPlayer);
 		}
