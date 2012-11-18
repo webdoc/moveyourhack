@@ -387,9 +387,9 @@
 			{
 				var now = new Date().getTime();
 				//console.log(delta);
-				game.analyze((now - TIME ) / 100 | 0);
-				if (game.RUN);
-				game.render();	
+				game.analyze((now - game.startTime ) / game.timeline.interval | 0);
+				if (game.RUN)
+				    game.render();
 				if (game.RUN)
 					requestAnimFrame(game.run);
 			}
@@ -439,12 +439,8 @@
 		}
 		var userMedia = new UserMedia();
 
-		var TIME = 0;
-
 		function launchGame(timeline, soundPlayer)
 		{
-
-			TIME = new Date().getTime();
 			console.log(timeline.getResult());
 			soundPlayer.pause();
 			soundPlayer.seek(0);
