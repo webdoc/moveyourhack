@@ -1,7 +1,8 @@
 SongTimelineDisplay = function(timeline, canvas) {
-	this.timeline = timeline;
-	this.canvasNode = canvas;
-	this.ctx = canvas.getContext('2d');	
+	this.timeline = timeline;        
+	this.canvasNode = jQuery('<canvas id="canvas" width="10000" height="500"></canvas>');
+    jQuery("#timeline").append(this.canvasNode);
+	this.ctx = this.canvasNode[0].getContext('2d');	
 	this.WIDTH = 60;
 	this.HEIGHT = 500;
     this.RECT_WIDTH = 5;
