@@ -452,8 +452,6 @@
 		function launchGame(timeline, soundPlayer)
 		{
 			console.log(timeline.getResult());
-			soundPlayer.pause();
-			soundPlayer.seek(0);
             game.init(timeline.getResult());
             game.preRenderVisualizer(timeline);
             userMedia.init(soundPlayer);

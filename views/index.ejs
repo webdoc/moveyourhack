@@ -42,6 +42,36 @@
     </div>
     <div id="dz-root"></div>
     <script type="text/javascript">
+      function renderSongChooser(){
+        var chooser = new SongChooser({
+          songChooserNode: "#songchooser",
+          searchResultNode: "#searchResults"
+        });
+
+        chooser.done(function(id){
+          if(window.history){
+            history.pushState({}, "Playing", "#!songPlaying")
+          }
+          console.log('Done' + id);
+          handleSongPlayerReady(id, function(){
+            DZ.player.playTracks([id], false, function(){
+              // uncomment to start viewer
+              // setTimeout("DZ.player.pause();", 1000);
+              launchGame(timeline, DZ.player);
+            });
+          });
+        });
+        return chooser ;
+      }
+
+      if(window.history) {
+        console.log('configure popstate')
+        window.onpopstate = function(event){
+          renderSongChooser();
+          $(game.canvas).remove();
+        };
+      }
+
 
       DZ.init({
         appId  : '108771',
@@ -57,24 +87,9 @@
         console.log(args);
       });
 
-      var chooser = new SongChooser({
-        songChooserNode: "#songchooser",
-        searchResultNode: "#searchResults"
-      });
+      var chooser = renderSongChooser();
 
-      chooser.done(function(id){
-        console.log('Done' + id);
-        handleSongPlayerReady(id, function(){
-          DZ.player.playTracks([id], function(){
-            // uncomment to start viewer
-            setTimeout("DZ.player.pause();", 1000);
-
-            launchGame(timeline, DZ.player);
-          });
-        });
-      });
-
-      chooser.autoload('aerodynamic');
+      chooser.autoload('elephunk');
 
       // After the song is loaded in Deezer, go for more fun and
       // get its analytics from echonest.
