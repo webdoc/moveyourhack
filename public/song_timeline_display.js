@@ -21,8 +21,8 @@ SongTimelineDisplay.prototype.render = function(callback) {
         var segValue = segmentResult[i];
         this.ctx.fillStyle = '#8d1';
     	this.ctx.fillRect(i* this.RECT_WIDTH,0, this.RECT_WIDTH, this.HEIGHT * value);
-        this.ctx.fillStyle = '#811';
-        this.ctx.fillRect(i* this.RECT_WIDTH,this.HEIGHT * value, this.RECT_WIDTH, this.HEIGHT * segValue);        
+        //this.ctx.fillStyle = '#811';
+        //this.ctx.fillRect(i* this.RECT_WIDTH,this.HEIGHT * value, this.RECT_WIDTH, this.HEIGHT * segValue);        
     }
 	callback.apply(this, []);
 }

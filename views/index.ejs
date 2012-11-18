@@ -65,7 +65,7 @@
         console.log('Done' + id);
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
-            setTimeout("timelineDisplay.run()", 1000);
+            setTimeout("timelineDisplay.run()", 100);
             DZ.player.seek(0);
             launchGame(timelineDisplay.timeline.getResult());
           });

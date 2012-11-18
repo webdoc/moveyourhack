@@ -81,13 +81,13 @@ SongTimeline.prototype.init = function() {
 }
 
 SongTimeline.prototype.getResult = function() {
-	var count = this.beatTimeline.length;
+	var count = this.tatumsTimeline.length;
 	var i;
 	var result = [];
 	for (i = 0; i < count; i++) {
-		result[i] = (this.beatTimeline[i] + this.tatumsTimeline[i] + this.sectionsTimeline[i]) / 3;
+		result[i] = (this.tatumsTimeline[i] + this.segmentsTimeline[i]) / 2.0;
 	}
-	return this.tatumsTimeline;
+	return result;
 }
 
 SongTimeline.prototype.getSegmentResult = function() {
