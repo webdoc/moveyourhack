@@ -67,9 +67,9 @@
         handleSongPlayerReady(id, function(){
           DZ.player.playTracks([id], function(){
             // uncomment to start viewer
-            //setTimeout("timelineDisplay.run()", 100);
-            DZ.player.seek(0);
-            launchGame(timeline.getResult(), DZ);
+            setTimeout("DZ.player.pause();", 1000);
+
+            launchGame(timeline, DZ.player);
           });
         });
       });

@@ -95,13 +95,17 @@
 				this.SPRITE.push(image);
 			}
 
-			this.start = function()
+			this.start = function(soundPlayer)
 			{
-				this.soundPlayer.player.play();
+                console.log("game start");
 				this.RUN = 1;
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
+                soundPlayer.play();
+                soundPlayer.seek(0);
+                this.startTime = new Date();
+                this.startTime = this.startTime.getTime();
 			}
 
 			this.stop = function()
@@ -126,20 +130,26 @@
 					  {
 					  	this.map[x][y]--;
 
-					  	var angle = Math.random() * Math.PI*2;
-						var speed = Math.random() * 12.;
-						var p =
-						{
-							x : x * X, 
-							y : y * Y,                      
-							xs: Math.sin(angle) * speed,
-							ys: Math.cos(angle) * speed,
-							s  : Math.random() * 40 | 0,
-							l : 50
+				  		var i = 0;
+					  	while (i++ < 10)
+					  	{
+						  	var angle = Math.random() * Math.PI*2;
+							var speed = Math.random() * 12.;
+							
+
+							var p =
+							{
+								x : x * X, 
+								y : y * Y,                      
+								xs: Math.sin(angle) * speed,
+								ys: Math.cos(angle) * speed,
+								s  : Math.random() * 40 | 0,
+								l : 5
+							}
+							this.PARTICLES.push(
+								p
+							);
 						}
-						this.PARTICLES.push(
-							p
-						);
 					  }
 					  ++y;
 					}
@@ -153,7 +163,13 @@
 				var ctx = this.ctx;
 				var x = 0;
 
-				ctx.fillStyle = '#fff';
+				if (this.intensity < 0.01)
+					ctx.fillStyle = '#f00';
+				else if (this.intensity < 0.03)
+					ctx.fillStyle = '#ff0';
+				else
+					ctx.fillStyle = '#0f0';
+				// ctx.fillStyle = '#fff';
 				ctx.beginPath();
 
 				var X = this.WIDTH / 64;
@@ -181,6 +197,7 @@
 			 	var ctx = this.ctx;
 			 	var i = 0;
 
+			 	ctx.globalAlpha = 0.5;
 			 	var X = this.WIDTH / 64;
 				ctx.beginPath();
 			 	while (i < this.PARTICLES.length)
@@ -190,14 +207,15 @@
 			 		p.y += p.ys;
 			 		//p.s = Math.random() * 40 | 0;
 			 		p.l--;
-			 		// ctx.moveTo(p.x, p.y);
-					//ctx.arc(p.x, p.y, X /3,0, Math.PI * 2, true);
-			 		 ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
+			 		ctx.moveTo(p.x, p.y);
+					ctx.arc(p.x, p.y, X / 8,0, Math.PI * 2, true);
+			 		 //ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
 			 		if (p.l ==0)
 			 			this.PARTICLES.splice(i--, 1);
 			 		++i;
 			 	}
 			 	ctx.fill();
+			 	ctx.globalAlpha = 1.0;
 			}
 
 			this.renderTexts = function()
@@ -223,7 +241,7 @@
 										xs: 0,
 										ys: 4,
 										s  : 6,
-										l : 10 
+										l : 50 
 									});
 								}
 								
@@ -244,10 +262,53 @@
 				this.ctx.fillText(this.score + ' ', this.WIDTH  - 200, 50);
 			}
 
+            this.preRenderVisualizer = function(timeline) {
+                this.timeline = timeline;
+                this.scale = 1000 / timeline.interval * 5;
+                this.visualizerCanvas = document.createElement('canvas');
+                this.visualizerCanvas.width = 5 * timeline.getResult().length;
+                this.visualizerCanvas.height = 150;
+                var m_context = this.visualizerCanvas.getContext("2d");
+                m_context.fillStyle = '#000';
+                m_context.globalAlpha = 0.5;
+                m_context.fillRect(0,0, this.visualizerCanvas.width, this.visualizerCanvas.height);
+                var i = 0, count = timeline.tatumsTimeline.length;
+                var result = timeline.getResult();
+
+                for (; i < count ; i++) {
+                    var value = result[i];
+                    console.log("value", value);
+                    m_context.fillStyle = '#c33';
+                    m_context.fillRect(i* 5,0, 5, this.visualizerCanvas.height * value * 2);
+                }
+            }
+
+            this.renderVisualizer = function()
+            {
+                if (this.startTime) {
+                    var currentDate = new Date();
+                    var distance = currentDate.getTime() - this.startTime;
+                    var distanceInpx = distance * this.scale / 1000;
+                    var lengthOffset = 0;
+                    var startOffset = 0;
+                    if (distanceInpx < 150) {
+                        lengthOffset = 150 - distanceInpx;
+                    }
+                    else {
+                        startOffset =  (distance * this.scale / 1000) - 150;
+                    }
+                    this.ctx.drawImage(this.visualizerCanvas, startOffset, 0, 300 - lengthOffset, 150,this.WIDTH -400 + lengthOffset, this.HEIGHT - 250, 300 - lengthOffset, 150);
+                    this.ctx.strokeStyle = '#8d1';
+                    this.ctx.strokeRect(this.WIDTH -400, this.HEIGHT - 250, 300, 150);
+                    this.ctx.strokeStyle = '#ccc';
+                    this.ctx.strokeRect(this.WIDTH -250, this.HEIGHT - 250, 1, 150);
+                }
+            }
+
 			this.render = function()
 			{		
 				var ctx = this.ctx;
-				ctx.globalAlpha = .2;
+				ctx.globalAlpha = .5;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
 				ctx.globalAlpha = 1.0
@@ -259,11 +320,13 @@
 					this.pushParticles();
 					this.renderParticles();
 				}
-				this.renderTexts();
+				//if (Math.random() > 0.99)
+					
 				this.renderScore();
+                this.renderVisualizer();
 			}
 
-			this.analyze = function()
+			this.analyze = function(now)
 			{
 				this.videoCtx.drawImage(userMedia.video,0,0, 64, 48);
 				this.texture.loadContentsOf(this.videoCanvas);
@@ -273,11 +336,31 @@
     			this.fxCanvas.update();
 			    this.videoCtx.drawImage(this.fxCanvas, 0, 0);
 			    this.intensity = this.compute();
+			   // console.log(now);
+			    //console.log(this.intensity + ' --  ' + this.soundData[now])
 			    // TODO : true scoring;
-			    this.score += this.intensity * 1000 | 0;
+			    var l = 0;
+			    if (this.soundData[now]) 
+			     l = 0.2 - Math.abs(this.intensity - this.soundData[now]);
+			  
+			    this.score += (l> 0 ) ?  l * 1000 | 0: 0;
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
+				if (!this.soundData[now])
+					this.gameOver();
 			}
 
+			this.gameOver = function()
+			{
+				/*this.RUN = 0;
+
+				ctx.fillStyle = '#000';
+				ctx.globalAlpha = 0.5;
+				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+				ctx.fillStyle = '#fff';
+				ctx.globalAlpha = 0.0;
+				ctx.font = '80px Arial';
+				ctx.fillText(this.score, this.WIDTH / 2 - 300, this.HEIGHT / 2);
+			  */}
 			this.compute = function()
 			{
 				this.data = this.videoCtx.getImageData(0,0,64,48).data;
@@ -306,14 +389,17 @@
 			}
 
 			this.addComment = function(text){
-				this.COMMENTS.push({text: text, ttl: 100, y: 10});
+				this.COMMENTS.push({text: text, ttl: 1, y: 10});
+				this.renderTexts();
 			}
 
 			this.run = function(delta)
 			{
+				var now = new Date().getTime();
 				//console.log(delta);
-				game.analyze();
-				game.render();	
+				game.analyze((now - game.startTime ) / game.timeline.interval | 0);
+				if (game.RUN)
+				    game.render();
 				if (game.RUN)
 					requestAnimFrame(game.run);
 			}
@@ -339,7 +425,7 @@
 
 			this.video = document.createElement('video');
 
-			this.init = function()
+			this.init = function(soundPlayer)
 			{
 				if (navigator.getUserMedia)
 				{
@@ -350,7 +436,7 @@
 							console.log('oh');
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
-				    		game.start();
+				    		game.start(soundPlayer);
 				  		}, 
 				  		this.onFailSoHard
 				  	);
@@ -363,16 +449,14 @@
 		}
 		var userMedia = new UserMedia();
 
-		var TIME = 0;
-
-		function launchGame(SoundArray, soundPlayer)
+		function launchGame(timeline, soundPlayer)
 		{
-			TIME = new Date().getTime();
-			console.log(SoundArray);
-			soundPlayer.player.pause();
-			soundPlayer.player.seek(0);
-			game.init(SoundArray, soundPlayer);
-			userMedia.init();;
+			console.log(timeline.getResult());
+			soundPlayer.pause();
+			soundPlayer.seek(0);
+            game.init(timeline.getResult());
+            game.preRenderVisualizer(timeline);
+            userMedia.init(soundPlayer);
 
 			// COMMENTS
 			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
