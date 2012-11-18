@@ -95,13 +95,17 @@
 				this.SPRITE.push(image);
 			}
 
-			this.start = function()
+			this.start = function(soundPlayer)
 			{
-				this.soundPlayer.player.play();
+                console.log("game start");
 				this.RUN = 1;
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
+                soundPlayer.play();
+                soundPlayer.seek(0);
+                this.startTime = new Date();
+                this.startTime = this.startTime.getTime();
 			}
 
 			this.stop = function()
@@ -258,6 +262,49 @@
 				this.ctx.fillText(this.score + ' ', this.WIDTH  - 200, 50);
 			}
 
+            this.preRenderVisualizer = function(timeline) {
+                this.timeline = timeline;
+                this.scale = 1000 / timeline.interval * 5;
+                this.visualizerCanvas = document.createElement('canvas');
+                this.visualizerCanvas.width = 5 * timeline.getResult().length;
+                this.visualizerCanvas.height = 150;
+                var m_context = this.visualizerCanvas.getContext("2d");
+                m_context.fillStyle = '#000';
+                m_context.globalAlpha = 0.5;
+                m_context.fillRect(0,0, this.visualizerCanvas.width, this.visualizerCanvas.height);
+                var i = 0, count = timeline.tatumsTimeline.length;
+                var result = timeline.getResult();
+
+                for (; i < count ; i++) {
+                    var value = result[i];
+                    console.log("value", value);
+                    m_context.fillStyle = '#c33';
+                    m_context.fillRect(i* 5,0, 5, this.visualizerCanvas.height * value * 2);
+                }
+            }
+
+            this.renderVisualizer = function()
+            {
+                if (this.startTime) {
+                    var currentDate = new Date();
+                    var distance = currentDate.getTime() - this.startTime;
+                    var distanceInpx = distance * this.scale / 1000;
+                    var lengthOffset = 0;
+                    var startOffset = 0;
+                    if (distanceInpx < 150) {
+                        lengthOffset = 150 - distanceInpx;
+                    }
+                    else {
+                        startOffset =  (distance * this.scale / 1000) - 150;
+                    }
+                    this.ctx.drawImage(this.visualizerCanvas, startOffset, 0, 300 - lengthOffset, 150,this.WIDTH -400 + lengthOffset, this.HEIGHT - 250, 300 - lengthOffset, 150);
+                    this.ctx.strokeStyle = '#8d1';
+                    this.ctx.strokeRect(this.WIDTH -400, this.HEIGHT - 250, 300, 150);
+                    this.ctx.strokeStyle = '#ccc';
+                    this.ctx.strokeRect(this.WIDTH -250, this.HEIGHT - 250, 1, 150);
+                }
+            }
+
 			this.render = function()
 			{		
 				var ctx = this.ctx;
@@ -276,6 +323,7 @@
 				//if (Math.random() > 0.99)
 					
 				this.renderScore();
+                this.renderVisualizer();
 			}
 
 			this.analyze = function(now)
@@ -377,7 +425,7 @@
 
 			this.video = document.createElement('video');
 
-			this.init = function()
+			this.init = function(soundPlayer)
 			{
 				if (navigator.getUserMedia)
 				{
@@ -388,7 +436,7 @@
 							console.log('oh');
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
-				    		game.start();
+				    		game.start(soundPlayer);
 				  		}, 
 				  		this.onFailSoHard
 				  	);
@@ -403,14 +451,16 @@
 
 		var TIME = 0;
 
-		function launchGame(SoundArray, soundPlayer)
+		function launchGame(timeline, soundPlayer)
 		{
+
 			TIME = new Date().getTime();
-			console.log(SoundArray);
-			soundPlayer.player.pause();
-			soundPlayer.player.seek(0);
-			game.init(SoundArray, soundPlayer);
-			userMedia.init();;
+			console.log(timeline.getResult());
+			soundPlayer.pause();
+			soundPlayer.seek(0);
+            game.init(timeline.getResult());
+            game.preRenderVisualizer(timeline);
+            userMedia.init(soundPlayer);
 
 			// COMMENTS
 			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
