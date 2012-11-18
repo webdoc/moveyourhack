@@ -72,7 +72,7 @@ SongTimeline.prototype.init = function() {
 		// SECTIONS
 		//filltimeline(this.sectionsTimeline, analyse.sections, analyse.meta.seconds);
 	
-	    // SEGMENTS
+	  // SEGMENTS
 		fillSegmentTimeline(analyse.segments, analyse.meta.seconds);
 		result.resolve();	
 		

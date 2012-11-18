@@ -204,11 +204,11 @@
 			{
 				var spacing = 8 ;
 				var letterSpacing = 5 ;
-				var posX = 10 ;
-				var posY = 10 ;
+				var posY = 100 ;
 				for(var ts = this.COMMENTS.length -1; ts >= 0; ts--){
 					var comment = this.COMMENTS[ts];
 					comment.ttl --;
+					var posX = 150 ;
 					if(comment.ttl == 0){
 						this.COMMENTS.shift();
 					}
@@ -232,9 +232,9 @@
 						posX += letterSpacing + letter.length * spacing;
 					}
 					if(comment.ttl < 20){
-						comment.y += letterSpacing + 2;
+						comment.y += 8;
 					}
-					posY += letterSpacing + 8 * spacing;
+					posY += letterSpacing + 12 * spacing;
 				}	
 			}
 
@@ -306,7 +306,7 @@
 			}
 
 			this.addComment = function(text){
-				this.COMMENTS.push({text: text, ttl: 30, y: 10});
+				this.COMMENTS.push({text: text, ttl: 100, y: 10});
 			}
 
 			this.run = function(delta)
@@ -373,6 +373,7 @@
 			soundPlayer.player.seek(0);
 			game.init(SoundArray, soundPlayer);
 			userMedia.init();;
-			game.addComment('ROCK YOU !') ;
-			setInterval(function(){game.addComment('AGAIN MAKE ME DANCE')}, 2000);
+
+			// COMMENTS
+			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
 		}
