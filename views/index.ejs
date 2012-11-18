@@ -102,13 +102,6 @@
       // DZ.Event.subscribe('player_play', function(){
       //  console.log("START PLAYING EVENT RECEIVED.");
       // });
-        DZ.getLoginStatus(function(response) {
-          if (response.authResponse) {
-            LOGGED_USER = true;
-          } else {
-            LOGGED_USER = false;
-          }
-        });
       var chooser = renderSongChooser();
 
       chooser.autoload('Move It');
