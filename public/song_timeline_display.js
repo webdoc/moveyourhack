@@ -12,13 +12,17 @@ SongTimelineDisplay = function(timeline, canvas) {
 SongTimelineDisplay.prototype.render = function(callback) {
     this.ctx.fillStyle = '#000';
     this.ctx.fillRect(0,0, this.WIDTH, this.HEIGHT);
-    var i = 0, count = this.timeline.beatTimeline.length;
-    var result = this.timeline.getResult()
-    this.ctx.fillStyle = '#8d1';
+    var i = 0, count = this.timeline.tatumsTimeline.length;
+    var result = this.timeline.getResult();
+    var segmentResult = this.timeline.getSegmentResult();    
     
-    for (; i < count || i < this.WIDTH - 1; i++) {
-    	var medium = result[i];
-    	this.ctx.fillRect(i* this.RECT_WIDTH,0, this.RECT_WIDTH, this.HEIGHT * medium);
+    for (; i < count ; i++) {
+    	var value = result[i];
+        var segValue = segmentResult[i];
+        this.ctx.fillStyle = '#8d1';
+    	this.ctx.fillRect(i* this.RECT_WIDTH,0, this.RECT_WIDTH, this.HEIGHT * value);
+        this.ctx.fillStyle = '#811';
+        this.ctx.fillRect(i* this.RECT_WIDTH,this.HEIGHT * value, this.RECT_WIDTH, this.HEIGHT * segValue);        
     }
 	callback.apply(this, []);
 }

@@ -34,7 +34,7 @@
           <div id="songchooser"></div>
           <div id="searchResults"></div>
           <div id="player"></div>
-          <canvas id="canvas" width="2000" height="500"></canvas>
+          <canvas id="canvas" width="10000" height="500"></canvas>
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@
       // get its analytics from echonest.
       function handleSongPlayerReady(deezerId, callback){
         var song = new Song(deezerId);
-        var timeline = new SongTimeline(song, 200);
+        var timeline = new SongTimeline(song, 100);
         timeline.init().done(function(){
           timelineDisplay = new SongTimelineDisplay(timeline, document.querySelector("#canvas"));
           timelineDisplay.render(callback);
