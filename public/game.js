@@ -340,10 +340,10 @@
 			    //console.log(this.intensity + ' --  ' + this.soundData[now])
 			    // TODO : true scoring;
 			    var l = 0;
-			    if (this.soundData[now]) 
-			     l = 0.2 - Math.abs(this.intensity - this.soundData[now]);
-			  
-			    this.score += (l> 0 ) ?  l * 1000 | 0: 0;
+			    if (this.intensity && this.soundData.length > now) {
+			     l = Math.abs(this.intensity - this.soundData[now]);
+                 this.score += (l < 0.1 ) ?  l * 500 | 0: 0;
+                }
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
 				if (!this.soundData[now])
 					this.gameOver();
@@ -385,7 +385,12 @@
 					++x;   
 				}
 		//		console.log(hash);
-				return intensity / 3072;
+                if (intensity === 0) {
+                    intensity = this.lastIntensity;
+                }
+                this.lastIntensity = intensity
+                // boost a little bit intensity
+				return intensity * 5 / 3072.0;
 			}
 
 			this.addComment = function(text){
