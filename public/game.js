@@ -102,6 +102,7 @@
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
+                this.soundPlayer = soundPlayer;
                 soundPlayer.play();
                 soundPlayer.seek(0);
                 this.startTime = new Date();
@@ -111,7 +112,7 @@
 			this.stop = function()
 			{
 				this.RUN = 0;
-				this.soundPlayer.player.pause();
+				this.soundPlayer.pause();
 			}
 
 			this.pushParticles = function()
@@ -308,25 +309,38 @@
             }
 
 			this.render = function()
-			{		
-				var ctx = this.ctx;
-				ctx.globalAlpha = .5;
-				ctx.fillStyle = '#000';
-				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
-				ctx.globalAlpha = 1.0
-				//ctx.drawImage(this.videoCanvas, 0 ,0);
-				this.renderVisualizer();
-				this.renderPixel();
-				if (this.intensity == 0)
-				{
-					// this.pushParticles();
-					
-				}
-				this.renderParticles();
-				//if (Math.random() > 0.99)
-					
-				this.renderScore();
-                
+			{
+                if (game.RUN) {
+                    var ctx = this.ctx;
+                    ctx.globalAlpha = .5;
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+                    ctx.globalAlpha = 1.0
+                    //ctx.drawImage(this.videoCanvas, 0 ,0);
+                    this.renderVisualizer();
+                    this.renderPixel();
+                    if (this.intensity == 0)
+                    {
+                        // this.pushParticles();
+
+                    }
+                    this.renderParticles();
+                    //if (Math.random() > 0.99)
+
+                    this.renderScore();
+                }
+                else {
+                    var ctx = this.ctx;
+                    ctx.fillStyle = '#000';
+                    ctx.globalAlpha = 0.5;
+                    ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+                    ctx.fillStyle = '#fff';
+                    ctx.globalAlpha = 1.0;
+                    ctx.font = '80px Monoton';
+                    ctx.fillText('Game over', this.WIDTH / 2 - 300, this.HEIGHT / 2 - 150);
+                    ctx.fillText(this.score, this.WIDTH / 2 - 300, this.HEIGHT / 2);
+                    this.renderPixel();
+                }
 			}
 
 			this.analyze = function(now)
@@ -342,28 +356,26 @@
 			   // console.log(now);
 			    //console.log(this.intensity + ' --  ' + this.soundData[now])
 			    // TODO : true scoring;
-			    var l = 0;
-			    if (this.intensity && this.soundData.length > now) {
-			     l = Math.abs(this.intensity - this.soundData[now]);
-                 this.score += (l < 0.1 ) ?  l * 500 | 0: 0;
+                if (game.RUN) {
+                    var l = 0;
+                    if (this.intensity && this.soundData.length > now) {
+                     l = Math.abs(this.intensity - this.soundData[now]);
+                     this.score += (l < 0.1 ) ?  l * 500 | 0: 0;
+                    }
+                    if (now >= this.soundData.length || (now * this.timeline.interval / 1000) > 10) {
+                        this.gameOver();
+                    }
                 }
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
-				if (!this.soundData[now])
-					this.gameOver();
+
 			}
 
 			this.gameOver = function()
 			{
-				/*this.RUN = 0;
+                this.stop();
+                DanceParty.songUtils.showGameOver(this.score);
+			}
 
-				ctx.fillStyle = '#000';
-				ctx.globalAlpha = 0.5;
-				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
-				ctx.fillStyle = '#fff';
-				ctx.globalAlpha = 0.0;
-				ctx.font = '80px Arial';
-				ctx.fillText(this.score, this.WIDTH / 2 - 300, this.HEIGHT / 2);
-			  */}
 			this.compute = function()
 			{
 				this.data = this.videoCtx.getImageData(0,0,64,48).data;
@@ -406,10 +418,8 @@
 				var now = new Date().getTime();
 				//console.log(delta);
 				game.analyze((now - game.startTime ) / game.timeline.interval | 0);
-				if (game.RUN)
-				    game.render();
-				if (game.RUN)
-					requestAnimFrame(game.run);
+				game.render();
+				requestAnimFrame(game.run);
 			}
 		}
 		var game = new Game();
