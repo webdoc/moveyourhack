@@ -224,7 +224,7 @@
 				this.renderScore();
 			}
 
-			this.analyze = function()
+			this.analyze = function(now)
 			{
 				this.videoCtx.drawImage(userMedia.video,0,0, 64, 48);
 				this.texture.loadContentsOf(this.videoCanvas);
@@ -234,11 +234,31 @@
     			this.fxCanvas.update();
 			    this.videoCtx.drawImage(this.fxCanvas, 0, 0);
 			    this.intensity = this.compute();
+			   // console.log(now);
+			    //console.log(this.intensity + ' --  ' + this.soundData[now])
 			    // TODO : true scoring;
-			    this.score += this.intensity * 1000 | 0;
+			    var l = 0;
+			    if (this.soundData[now]) 
+			     l = 0.2 - Math.abs(this.intensity - this.soundData[now]);
+			    console.log(l);
+			    this.score += (l> 0 ) ?  l * 1000 | 0: 0;
 			    this.videoCtx.drawImage(userMedia.video, 0, 48, 64, 48);
+				if (!this.soundData[now])
+					this.gameOver();
 			}
 
+			this.gameOver = function()
+			{
+				/*this.RUN = 0;
+
+				ctx.fillStyle = '#000';
+				ctx.globalAlpha = 0.5;
+				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
+				ctx.fillStyle = '#fff';
+				ctx.globalAlpha = 0.0;
+				ctx.font = '80px Arial';
+				ctx.fillText(this.score, this.WIDTH / 2 - 300, this.HEIGHT / 2);
+			  */}
 			this.compute = function()
 			{
 				this.data = this.videoCtx.getImageData(0,0,64,48).data;
@@ -268,8 +288,10 @@
 
 			this.run = function(delta)
 			{
+				var now = new Date().getTime();
 				//console.log(delta);
-				game.analyze();
+				game.analyze((now - TIME ) / 100 | 0);
+				if (game.RUN);
 				game.render();	
 				if (game.RUN)
 					requestAnimFrame(game.run);
