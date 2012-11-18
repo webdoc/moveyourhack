@@ -102,11 +102,12 @@
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
+				var self = this ;
                 soundPlayer.play();
                 soundPlayer.seek(0);
                 DZ.Event.subscribe('player_paused', function(){
 					        console.log("STOP PLAYING EVENT RECEIVED.");
-					        this.gameOver();
+					        self.gameOver();
 					      });
                 this.startTime = new Date();
                 this.startTime = this.startTime.getTime();
