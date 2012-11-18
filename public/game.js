@@ -153,7 +153,13 @@
 				var ctx = this.ctx;
 				var x = 0;
 
-				ctx.fillStyle = '#fff';
+				if (this.intensity < 0.01)
+					ctx.fillStyle = '#f00';
+				else if (this.intensity < 0.03)
+					ctx.fillStyle = '#ff0';
+				else
+					ctx.fillStyle = '#0f0';
+				// ctx.fillStyle = '#fff';
 				ctx.beginPath();
 
 				var X = this.WIDTH / 64;
