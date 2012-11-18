@@ -5,7 +5,7 @@ SongTimelineDisplay = function(timeline, canvas) {
 	this.ctx = this.canvasNode[0].getContext('2d');	
 	this.WIDTH = 60;
 	this.HEIGHT = 500;
-    this.RECT_WIDTH = 5;
+    this.RECT_WIDTH = 1;
     this.SCALE = 1000 / timeline.interval * this.RECT_WIDTH;
     console.log("scale", this.SCALE);
 }
