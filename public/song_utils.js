@@ -15,6 +15,7 @@ DanceParty.songUtils = {
   showGameOver: function(score) {
     var modalGO = $('#modal_game_over');
     modalGO.data('score', score);
+    modalGO.find('#score').html('Your score: '+score);
     modalGO.modal();
   }
 };
