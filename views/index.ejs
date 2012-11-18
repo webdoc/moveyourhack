@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title><%= title %></title>
+    <title>DanceParty.me</title>
     <link href='http://fonts.googleapis.com/css?family=Monoton' rel='stylesheet' type='text/css'>
     <link href='http://fonts.googleapis.com/css?family=Poiret+One' rel='stylesheet' type='text/css' />
     <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.2.1/css/bootstrap-combined.min.css" rel="stylesheet" />
@@ -102,16 +102,9 @@
       // DZ.Event.subscribe('player_play', function(){
       //  console.log("START PLAYING EVENT RECEIVED.");
       // });
-        DZ.getLoginStatus(function(response) {
-          if (response.authResponse) {
-            LOGGED_USER = true;
-          } else {
-            LOGGED_USER = false;
-          }
-        });
       var chooser = renderSongChooser();
 
-      chooser.autoload('elephunk');
+      chooser.autoload('Move It');
 
       // After the song is loaded in Deezer, go for more fun and
       // get its analytics from echonest.

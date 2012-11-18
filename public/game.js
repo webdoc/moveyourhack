@@ -367,7 +367,7 @@
                      l = Math.abs(this.intensity - this.soundData[now]);
                      this.score += (l < 0.1 ) ?  l * 500 | 0: 0;
                     }
-                    var maxTime = LOGGED_USER ? 60 : 28;
+                    var maxTime =  120;
                     if (now >= this.soundData.length || (now * this.timeline.interval / 1000) > maxTime) {
                         this.gameOver();
                     }

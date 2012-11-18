@@ -2,13 +2,18 @@ if(!window.DanceParty) { window.DanceParty = {}; }
 
 DanceParty.songUtils = {
   getCheer: function(score){
-    if(score < 0.8) {
-      return 'GG!!!';
-    } else if(score < 0.5) {
-      return 'Greattt!';
+    console.log(score);
+    if(score > 0.7) {
+      return 'Move your Body!';
+    }
+    else if(score > 0.4) {
+      return 'Come on!';
+    }
+    else if(score > 0.2) {
+      return 'Listen to the beat!';
     }
     else {
-      return 'Move, move!';
+      return "You re not a Travolta!";
     }
   },
 
