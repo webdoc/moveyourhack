@@ -1,7 +1,8 @@
 SongTimelineDisplay = function(timeline, canvas) {
-	this.timeline = timeline;
-	this.canvasNode = canvas;
-	this.ctx = canvas.getContext('2d');	
+	this.timeline = timeline;        
+	this.canvasNode = jQuery('<canvas id="canvas" width="10000" height="500"></canvas>');
+    jQuery("#timeline").append(this.canvasNode);
+	this.ctx = this.canvasNode[0].getContext('2d');	
 	this.WIDTH = 60;
 	this.HEIGHT = 500;
     this.RECT_WIDTH = 5;
@@ -21,8 +22,8 @@ SongTimelineDisplay.prototype.render = function(callback) {
         var segValue = segmentResult[i];
         this.ctx.fillStyle = '#8d1';
     	this.ctx.fillRect(i* this.RECT_WIDTH,0, this.RECT_WIDTH, this.HEIGHT * value);
-        this.ctx.fillStyle = '#811';
-        this.ctx.fillRect(i* this.RECT_WIDTH,this.HEIGHT * value, this.RECT_WIDTH, this.HEIGHT * segValue);        
+        //this.ctx.fillStyle = '#811';
+        //this.ctx.fillRect(i* this.RECT_WIDTH,this.HEIGHT * value, this.RECT_WIDTH, this.HEIGHT * segValue);        
     }
 	callback.apply(this, []);
 }
