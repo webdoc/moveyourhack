@@ -11,6 +11,7 @@
     <script src="./glfx.js"></script>
 
     <script src="song_utils.js" type="text/javascript"></script>
+    <script src="song_facebook.js" type="text/javascript"></script>
     <script src="song.js" type="text/javascript"></script>
     <script src="song_timeline.js" type="text/javascript"></script>
     <script src="song_timeline_display.js" type="text/javascript"></script>
@@ -21,6 +22,15 @@
   </head>
   <body>
     <div class="container">
+      <div class="row-fluid">
+        <div class="span12">
+          <% if(!auth.user) { %>
+            <a href="/auth/facebook">Login with Facebook</a>
+          <% } else { %>
+            <a href="/logout">Logout</a>
+          <% } %>
+        </div>
+      </div>
       <div class="row-fluid">
         <div class="span12">
           <h1>danceparty.me</h1>
@@ -79,6 +89,28 @@
           callback.apply(this,[]);
         });
       }
+    </script>
+    <div id="fb-root"></div>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '<%= config.facebook.appId %>',
+          channelUrl : '//<%= config.web.host %>/facebook/channel.html',
+          status     : true,
+          cookie     : true,
+          xfbml      : true
+        });
+        SongFacebook.didInit();
+      };
+
+      (function(d, debug){
+        var js, id = 'facebook-jssdk',
+        ref = d.getElementsByTagName('script')[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement('script'); js.id = id; js.async = true;
+        js.src = "//connect.facebook.net/en_US/all" + (debug ?  "/debug" : "") + ".js";
+        ref.parentNode.insertBefore(js, ref);
+      }(document, false));
     </script>
   </body>
 </html>
