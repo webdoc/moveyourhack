@@ -406,9 +406,9 @@
 					++x;
 				}
 		//		console.log(hash);
-                if (intensity === 0) {
-                    intensity = this.lastIntensity;
-                }
+                //if (intensity === 0) {
+                //    intensity = this.lastIntensity;
+                //}
                 this.lastIntensity = intensity
                 // boost a little bit intensity
 				return intensity * 5 / 3072.0;
