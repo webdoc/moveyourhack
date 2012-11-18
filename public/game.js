@@ -45,10 +45,11 @@
 			this.COMMENTS = [];
 
 			this.soundData = null;
-
-			this.init = function(soundData)
+			this.soundPlayer = null;
+			this.init = function(soundData, soundPlayer)
 			{
 				this.soundData = soundData;
+				this.soundPlayer = soundPlayer;
 				this.score = 0;
 
 				this.WIDTH = window.innerWidth;
@@ -96,6 +97,7 @@
 
 			this.start = function()
 			{
+				this.soundPlayer.player.play();
 				this.RUN = 1;
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
@@ -105,6 +107,7 @@
 			this.stop = function()
 			{
 				this.RUN = 0;
+				this.soundPlayer.player.pause();
 			}
 
 			this.pushParticles = function()
@@ -119,12 +122,12 @@
 					var y = 0;
 					while (y < 48)
 					{
-					  if (this.map[x][y])
+					  if (this.PARTICLES.length < 400 && this.map[x][y])
 					  {
 					  	this.map[x][y]--;
 
 					  	var angle = Math.random() * Math.PI*2;
-						var speed = Math.random() * 10.;
+						var speed = Math.random() * 12.;
 						var p =
 						{
 							x : x * X, 
@@ -132,7 +135,7 @@
 							xs: Math.sin(angle) * speed,
 							ys: Math.cos(angle) * speed,
 							s  : Math.random() * 40 | 0,
-							l : 12
+							l : 50
 						}
 						this.PARTICLES.push(
 							p
@@ -150,12 +153,7 @@
 				var ctx = this.ctx;
 				var x = 0;
 
-				if (this.intensity < 0.005)
-					ctx.fillStyle = '#800';
-				else if (this.intensity < 0.02)
-					ctx.fillStyle = '#ff0';
-				else 
-					ctx.fillStyle = '#0f0';
+				ctx.fillStyle = '#fff';
 				ctx.beginPath();
 
 				var X = this.WIDTH / 64;
@@ -183,6 +181,8 @@
 			 	var ctx = this.ctx;
 			 	var i = 0;
 
+			 	var X = this.WIDTH / 64;
+				ctx.beginPath();
 			 	while (i < this.PARTICLES.length)
 			 	{
 			 		var p = this.PARTICLES[i];
@@ -190,11 +190,14 @@
 			 		p.y += p.ys;
 			 		//p.s = Math.random() * 40 | 0;
 			 		p.l--;
-			 		ctx.drawImage(this.SPRITE[0], p.x, p.y, p.s, p.s);
+			 		// ctx.moveTo(p.x, p.y);
+					//ctx.arc(p.x, p.y, X /3,0, Math.PI * 2, true);
+			 		 ctx.drawImage(this.SPRITE[0], p.x - 100, p.y - 100, p.s, p.s);
 			 		if (p.l ==0)
 			 			this.PARTICLES.splice(i--, 1);
 			 		++i;
 			 	}
+			 	ctx.fill();
 			}
 
 			this.renderTexts = function()
@@ -244,17 +247,19 @@
 			this.render = function()
 			{		
 				var ctx = this.ctx;
-				ctx.globalAlpha = .1;
+				ctx.globalAlpha = .2;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
 				ctx.globalAlpha = 1.0
 				//ctx.drawImage(this.videoCanvas, 0 ,0);
-				// if (Math.random() > 0.01)
+				
 				this.renderPixel();
-			//	else
-			//		this.pushParticles();
+				if (this.intensity == 0)
+				{
+					this.pushParticles();
+					this.renderParticles();
+				}
 				this.renderTexts();
-			  this.renderParticles();
 				this.renderScore();
 			}
 
@@ -296,7 +301,7 @@
 					}
 					++x;   
 				}
-				console.log(hash);
+		//		console.log(hash);
 				return intensity / 3072;
 			}
 
@@ -358,12 +363,16 @@
 		}
 		var userMedia = new UserMedia();
 
+		var TIME = 0;
 
 		function launchGame(SoundArray, soundPlayer)
 		{
-			console.log('Let s Dance :)');
-			game.init(SoundArray);
-			userMedia.init();
+			TIME = new Date().getTime();
+			console.log(SoundArray);
+			soundPlayer.player.pause();
+			soundPlayer.player.seek(0);
+			game.init(SoundArray, soundPlayer);
+			userMedia.init();;
 			game.addComment('ROCK YOU !') ;
 			setInterval(function(){game.addComment('AGAIN MAKE ME DANCE')}, 2000);
 		}
