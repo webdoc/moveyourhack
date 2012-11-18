@@ -16,7 +16,6 @@
 
 		// hack OVER
 
-
 		function Game()
 		{
 			this.WIDTH = 0;
@@ -42,6 +41,8 @@
 			this.PARTICLES = [];
 
 			this.SPRITE = [];
+
+			this.COMMENTS = [];
 
 			this.soundData = null;
 			this.soundPlayer = null;
@@ -101,7 +102,6 @@
 				this.fxCanvas = fx.canvas();
 				this.texture = this.fxCanvas.texture(this.videoCanvas);
 				this.run();
-
 			}
 
 			this.stop = function()
@@ -188,7 +188,7 @@
 			 		var p = this.PARTICLES[i];
 			 		p.x += p.xs;
 			 		p.y += p.ys;
-			 		p.s = Math.random() * 40 | 0;
+			 		//p.s = Math.random() * 40 | 0;
 			 		p.l--;
 			 		// ctx.moveTo(p.x, p.y);
 					//ctx.arc(p.x, p.y, X /3,0, Math.PI * 2, true);
@@ -198,6 +198,44 @@
 			 		++i;
 			 	}
 			 	ctx.fill();
+			}
+
+			this.renderTexts = function()
+			{
+				var spacing = 8 ;
+				var letterSpacing = 5 ;
+				var posY = 100 ;
+				for(var ts = this.COMMENTS.length -1; ts >= 0; ts--){
+					var comment = this.COMMENTS[ts];
+					comment.ttl --;
+					var posX = 150 ;
+					if(comment.ttl == 0){
+						this.COMMENTS.shift();
+					}
+					for(var t = 0; t < comment.text.length; t++){
+						var letter = alphabet[comment.text[t]]
+						for(var i = 0; i < letter.length; i++){
+							for(var j = 0; j < letter[i].length; j++){
+								if(letter[i][j]){
+									this.PARTICLES.push({
+										x : posX + j*spacing, 
+										y : posY + comment.y + i*spacing,                      
+										xs: 0,
+										ys: 4,
+										s  : 6,
+										l : 10 
+									});
+								}
+								
+							}	
+						}
+						posX += letterSpacing + letter.length * spacing;
+					}
+					if(comment.ttl < 20){
+						comment.y += 8;
+					}
+					posY += letterSpacing + 12 * spacing;
+				}	
 			}
 
 			this.renderScore = function()
@@ -212,7 +250,7 @@
 				ctx.globalAlpha = .2;
 				ctx.fillStyle = '#000';
 				ctx.fillRect(0,0,this.WIDTH, this.HEIGHT);
-				ctx.globalAlpha = 1.0;
+				ctx.globalAlpha = 1.0
 				//ctx.drawImage(this.videoCanvas, 0 ,0);
 				
 				this.renderPixel();
@@ -221,6 +259,7 @@
 					this.pushParticles();
 					this.renderParticles();
 				}
+				this.renderTexts();
 				this.renderScore();
 			}
 
@@ -286,6 +325,10 @@
 				return intensity / 3072;
 			}
 
+			this.addComment = function(text){
+				this.COMMENTS.push({text: text, ttl: 100, y: 10});
+			}
+
 			this.run = function(delta)
 			{
 				var now = new Date().getTime();
@@ -326,6 +369,7 @@
 						{audio: true, video: true}, 
 						function(stream) 
 						{
+							console.log('oh');
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
 				    		game.start();
@@ -351,4 +395,7 @@
 			soundPlayer.player.seek(0);
 			game.init(SoundArray, soundPlayer);
 			userMedia.init();;
+
+			// COMMENTS
+			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
 		}
