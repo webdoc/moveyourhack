@@ -1,10 +1,10 @@
 	// Hacky, look away
 		window.requestAnimFrame = (function(){
-		return  window.requestAnimationFrame       || 
-		      window.webkitRequestAnimationFrame || 
-		      window.mozRequestAnimationFrame    || 
-		      window.oRequestAnimationFrame      || 
-		      window.msRequestAnimationFrame     || 
+		return  window.requestAnimationFrame       ||
+		      window.webkitRequestAnimationFrame ||
+		      window.mozRequestAnimationFrame    ||
+		      window.oRequestAnimationFrame      ||
+		      window.msRequestAnimationFrame     ||
 		      function( callback ){
 		        window.setTimeout(callback, 1000 / 60);
 		      };
@@ -65,12 +65,12 @@
 				this.canvas.height = this.HEIGHT;
 				document.body.appendChild(this.canvas);
 				this.ctx = this.canvas.getContext('2d');
-			
+
 				this.videoCanvas = document.createElement('canvas');
 				this.videoCanvas.width = 64;
 				this.videoCanvas.height = 48 * 2;
 				this.videoCtx = this.videoCanvas.getContext('2d');
-			
+
 
 				this.map = [];
 				var i = 0;
@@ -139,12 +139,12 @@
 					  	{
 						  	var angle = Math.random() * Math.PI*2;
 							var speed = Math.random() * 12.;
-							
+
 
 							var p =
 							{
-								x : x * X, 
-								y : y * Y,                      
+								x : x * X,
+								y : y * Y,
 								xs: Math.sin(angle) * speed,
 								ys: Math.cos(angle) * speed,
 								s  : Math.random() * 40 | 0,
@@ -157,7 +157,7 @@
 					  }
 					  ++y;
 					}
-					++x;   
+					++x;
 				}
 			}
 
@@ -191,11 +191,11 @@
 					  }
 					  ++y;
 					}
-					++x;   
+					++x;
 				}
 				ctx.fill();
 			}
-			
+
 			this.renderParticles = function()
 			{
 			 	var ctx = this.ctx;
@@ -240,16 +240,16 @@
 							for(var j = 0; j < letter[i].length; j++){
 								if(letter[i][j]){
 									this.PARTICLES.push({
-										x : posX + j*spacing, 
-										y : posY + comment.y + i*spacing,                      
+										x : posX + j*spacing,
+										y : posY + comment.y + i*spacing,
 										xs: 0,
 										ys: 4,
 										s  : 6,
-										l : 50 
+										l : 50
 									});
 								}
-								
-							}	
+
+							}
 						}
 						posX += letterSpacing + letter.length * spacing;
 					}
@@ -257,7 +257,7 @@
 						comment.y += 8;
 					}
 					posY += letterSpacing + 12 * spacing;
-				}	
+				}
 			}
 
 			this.renderScore = function()
@@ -302,8 +302,8 @@
                     this.ctx.fillRect(199, this.HEIGHT - 150, 3, 150);
 
                     this.ctx.drawImage(this.visualizerCanvas, distanceInpx, 0, this.WIDTH, 150, 0, this.HEIGHT - 150, this.WIDTH, 150);
-                   
-                    
+
+
                    // this.ctx.strokeStyle = '#8d1';
                    // this.ctx.strokeRect(this.WIDTH -400, this.HEIGHT - 250, 300, 150);
                    // this.ctx.strokeStyle = '#ccc';
@@ -312,7 +312,7 @@
             }
 
 			this.render = function()
-			{		
+			{
 				var ctx = this.ctx;
 				ctx.globalAlpha = .5;
 				ctx.fillStyle = '#000';
@@ -324,13 +324,13 @@
 				if (this.intensity == 0)
 				{
 					// this.pushParticles();
-					
+
 				}
 				this.renderParticles();
 				//if (Math.random() > 0.99)
-					
+
 				this.renderScore();
-                
+
 			}
 
 			this.analyze = function(now)
@@ -389,7 +389,7 @@
 					  }
 					  ++y;
 					}
-					++x;   
+					++x;
 				}
 		//		console.log(hash);
                 if (intensity === 0) {
@@ -423,7 +423,7 @@
 
 		function UserMedia()
 		{
-			this.hasGetUserMedia = function() 
+			this.hasGetUserMedia = function()
 			{
 			  	// Note: Opera is unprefixed.
 			  	return !!(navigator.getUserMedia || navigator.webkitGetUserMedia ||
@@ -442,17 +442,17 @@
 				if (navigator.getUserMedia)
 				{
 					navigator.getUserMedia(
-						{audio: true, video: true}, 
-						function(stream) 
+						{audio: true, video: true},
+						function(stream)
 						{
 							console.log('oh');
 							userMedia.video.src = window.URL.createObjectURL(stream);
 				    		userMedia.video.play();
 				    		game.start(soundPlayer);
-				  		}, 
+				  		},
 				  		this.onFailSoHard
 				  	);
-				} 
+				}
 				else
 				{
 			  		alert('fail');
@@ -469,5 +469,5 @@
             userMedia.init(soundPlayer);
 
 			// COMMENTS
-			setInterval(function(){ game.addComment( songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
+			setInterval(function(){ game.addComment( DanceParty.songUtils.getCheer(Math.random()).toUpperCase() ) }, 2000);
 		}
