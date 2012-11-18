@@ -59,10 +59,11 @@
       }
 
       if(window.history) {
-        console.log('configure popstate')
         window.onpopstate = function(event){
           renderSongChooser();
-          $(game.canvas).remove();
+          if(game){
+            $(game.canvas).remove();
+          }
         };
       }
 
