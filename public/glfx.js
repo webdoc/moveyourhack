@@ -8,7 +8,140 @@
 var fx = (function() {
 var exports = {};
 
-// src/core\canvas.js
+// src/OES_texture_float_linear-polyfill.js
+// From: https://github.com/evanw/OES_texture_float_linear-polyfill
+(function() {
+  // Uploads a 2x2 floating-point texture where one pixel is 2 and the other
+  // three pixels are 0. Linear filtering is only supported if a sample taken
+  // from the center of that texture is (2 + 0 + 0 + 0) / 4 = 0.5.
+  function supportsOESTextureFloatLinear(gl) {
+    // Need floating point textures in the first place
+    if (!gl.getExtension('OES_texture_float')) {
+      return false;
+    }
+
+    // Create a render target
+    var framebuffer = gl.createFramebuffer();
+    var byteTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, byteTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, byteTexture, 0);
+
+    // Create a simple floating-point texture with value of 0.5 in the center
+    var rgba = [
+      2, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0
+    ];
+    var floatTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, floatTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.FLOAT, new Float32Array(rgba));
+
+    // Create the test shader
+    var program = gl.createProgram();
+    var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(vertexShader, '\
+      attribute vec2 vertex;\
+      void main() {\
+        gl_Position = vec4(vertex, 0.0, 1.0);\
+      }\
+    ');
+    gl.shaderSource(fragmentShader, '\
+      uniform sampler2D texture;\
+      void main() {\
+        gl_FragColor = texture2D(texture, vec2(0.5));\
+      }\
+    ');
+    gl.compileShader(vertexShader);
+    gl.compileShader(fragmentShader);
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+
+    // Create a buffer containing a single point
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0]), gl.STREAM_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+    // Render the point and read back the rendered pixel
+    var pixel = new Uint8Array(4);
+    gl.useProgram(program);
+    gl.viewport(0, 0, 1, 1);
+    gl.bindTexture(gl.TEXTURE_2D, floatTexture);
+    gl.drawArrays(gl.POINTS, 0, 1);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+    // The center sample will only have a value of 0.5 if linear filtering works
+    return pixel[0] === 127 || pixel[0] === 128;
+  }
+
+  // The constructor for the returned extension object
+  function OESTextureFloatLinear() {
+  }
+
+  // Cache the extension so it's specific to each context like extensions should be
+  function getOESTextureFloatLinear(gl) {
+    if (gl.$OES_texture_float_linear$ === void 0) {
+      Object.defineProperty(gl, '$OES_texture_float_linear$', {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+        value: new OESTextureFloatLinear()
+      });
+    }
+    return gl.$OES_texture_float_linear$;
+  }
+
+  // This replaces the real getExtension()
+  function getExtension(name) {
+    return name === 'OES_texture_float_linear'
+      ? getOESTextureFloatLinear(this)
+      : oldGetExtension.call(this, name);
+  }
+
+  // This replaces the real getSupportedExtensions()
+  function getSupportedExtensions() {
+    var extensions = oldGetSupportedExtensions.call(this);
+    if (extensions.indexOf('OES_texture_float_linear') === -1) {
+      extensions.push('OES_texture_float_linear');
+    }
+    return extensions;
+  }
+
+  // Get a WebGL context
+  try {
+    var gl = document.createElement('canvas').getContext('experimental-webgl');
+  } catch (e) {
+  }
+
+  // Don't install the polyfill if the browser already supports it or doesn't have WebGL
+  if (!gl || gl.getSupportedExtensions().indexOf('OES_texture_float_linear') !== -1) {
+    return;
+  }
+
+  // Install the polyfill if linear filtering works with floating-point textures
+  if (supportsOESTextureFloatLinear(gl)) {
+    var oldGetExtension = WebGLRenderingContext.prototype.getExtension;
+    var oldGetSupportedExtensions = WebGLRenderingContext.prototype.getSupportedExtensions;
+    WebGLRenderingContext.prototype.getExtension = getExtension;
+    WebGLRenderingContext.prototype.getSupportedExtensions = getSupportedExtensions;
+  }
+}());
+
+// src/core/canvas.js
 var gl;
 
 function clamp(lo, value, hi) {
@@ -18,8 +151,16 @@ function clamp(lo, value, hi) {
 function wrapTexture(texture) {
     return {
         _: texture,
-        loadContentsOf: function(element) { this._.loadContentsOf(element); },
-        destroy: function() { this._.destroy(); }
+        loadContentsOf: function(element) {
+            // Make sure that we're using the correct global WebGL context
+            gl = this._.gl;
+            this._.loadContentsOf(element);
+        },
+        destroy: function() {
+            // Make sure that we're using the correct global WebGL context
+            gl = this._.gl;
+            this._.destroy();
+        }
     };
 }
 
@@ -28,8 +169,21 @@ function texture(element) {
 }
 
 function initialize(width, height) {
-    // Go for floating point buffer textures if we can, it'll make the bokeh filter look a lot better
-    var type = gl.getExtension('OES_texture_float') ? gl.FLOAT : gl.UNSIGNED_BYTE;
+    var type = gl.UNSIGNED_BYTE;
+
+    // Go for floating point buffer textures if we can, it'll make the bokeh
+    // filter look a lot better. Note that on Windows, ANGLE does not let you
+    // render to a floating-point texture when linear filtering is enabled.
+    // See http://crbug.com/172278 for more information.
+    if (gl.getExtension('OES_texture_float') && gl.getExtension('OES_texture_float_linear')) {
+        var testTexture = new Texture(100, 100, gl.RGBA, gl.FLOAT);
+        try {
+            // Only use gl.FLOAT if we can render to it
+            testTexture.drawTo(function() { type = gl.FLOAT; });
+        } catch (e) {
+        }
+        testTexture.destroy();
+    }
 
     if (this._.texture) this._.texture.destroy();
     if (this._.spareTexture) this._.spareTexture.destroy();
@@ -109,40 +263,6 @@ function getPixelArray() {
     return array;
 }
 
-// Fix broken toDataURL() methods on some implementations
-function toDataURL(mimeType) {
-    var w = this._.texture.width;
-    var h = this._.texture.height;
-    var array = getPixelArray.call(this);
-    var canvas2d = document.createElement('canvas');
-    var c = canvas2d.getContext('2d');
-    canvas2d.width = w;
-    canvas2d.height = h;
-    var data = c.createImageData(w, h);
-    for (var i = 0; i < array.length; i++) {
-        data.data[i] = array[i];
-    }
-    c.putImageData(data, 0, 0);
-    return canvas2d.toDataURL(mimeType);
-}
-
-// Same as to DataUrl but just return an image
-function to2DImage(mimeType) {
-    var w = this._.texture.width;
-    var h = this._.texture.height;
-    var array = getPixelArray.call(this);
-    var canvas2d = document.createElement('canvas');
-    var c = canvas2d.getContext('2d');
-    canvas2d.width = w;
-    canvas2d.height = h;
-    var data = c.createImageData(w, h);
-    for (var i = 0; i < array.length; i++) {
-        data.data[i] = array[i];
-    }
-    c.putImageData(data, 0, 0);
-    return c;
-}
-
 function wrap(func) {
     return function() {
         // Make sure that we're using the correct global WebGL context
@@ -158,7 +278,6 @@ exports.canvas = function() {
     try {
         gl = canvas.getContext('experimental-webgl', { premultipliedAlpha: false });
     } catch (e) {
-        console.log(e);
         gl = null;
     }
     if (!gl) {
@@ -179,13 +298,9 @@ exports.canvas = function() {
     canvas.replace = wrap(replace);
     canvas.contents = wrap(contents);
     canvas.getPixelArray = wrap(getPixelArray);
-    canvas.toDataURL = wrap(toDataURL);
-    canvas.to2DImage = wrap(to2DImage);
 
-    // Filter methods
-    canvas.brightnessContrast = wrap(brightnessContrast);
+        // Filter methods
     canvas.hexagonalPixelate = wrap(hexagonalPixelate);
-    canvas.hueSaturation = wrap(hueSaturation);
     canvas.colorHalftone = wrap(colorHalftone);
     canvas.triangleBlur = wrap(triangleBlur);
     canvas.unsharpMask = wrap(unsharpMask);
@@ -215,6 +330,16 @@ exports.canvas = function() {
     canvas.contrast = wrap(contrast);
     canvas.hue = wrap(hue);
     canvas.saturation = wrap(saturation);
+    canvas.exposure = wrap(exposure);
+    canvas.gamma = wrap(gamma);
+    canvas.softContrast = wrap(softContrast);
+    canvas.simpleThreshold = wrap(simpleThreshold);
+    canvas.toHSV = wrap(toHSV);
+    canvas.sobel = wrap(sobel);
+    canvas.gradiant = wrap(gradiant);
+    canvas.color = wrap(color);
+    canvas.noise = wrap(noise);
+    canvas.adjust = wrap(adjust);
 
     canvas.incrust = wrap(incrust);
     canvas.incrustStep0 = wrap(incrustStep0);
@@ -228,11 +353,12 @@ exports.canvas = function() {
     canvas.toHSV = wrap(toHSV);
     canvas.move = wrap(move);
 
+
     return canvas;
 };
 exports.splineInterpolate = splineInterpolate;
 
-// src/core\matrix.js
+// src/core/matrix.js
 // from javax.media.jai.PerspectiveTransform
 
 function getSquareToQuad(x0, y0, x1, y1, x2, y2, x3, y3) {
@@ -278,7 +404,7 @@ function multiply(a, b) {
     ];
 }
 
-// src/core\shader.js
+// src/core/shader.js
 var Shader = (function() {
     function isArray(obj) {
         return Object.prototype.toString.call(obj) == '[object Array]';
@@ -351,9 +477,11 @@ var Shader = (function() {
                     case 16: gl.uniformMatrix4fv(location, false, new Float32Array(value)); break;
                     default: throw 'dont\'t know how to load uniform "' + name + '" of length ' + value.length;
                 }
-            } else {
+            } else if (isNumber(value)) {
                 gl.uniform1f(location, value);
-            } 
+            } else {
+                throw 'attempted to set uniform "' + name + '" to invalid value ' + (value || 'undefined').toString();
+            }
         }
         // allow chaining
         return this;
@@ -412,7 +540,7 @@ var Shader = (function() {
     return Shader;
 })();
 
-// src/core\spline.js
+// src/core/spline.js
 // from SplineInterpolator.cs in the Paint.NET source code
 
 function SplineInterpolator(points) {
@@ -486,7 +614,7 @@ SplineInterpolator.prototype.interpolate = function(x) {
         ((a * a * a - a) * this.y2[klo] + (b * b * b - b) * this.y2[khi]) * (h * h) / 6.0;
 };
 
-// src/core\texture.js
+// src/core/texture.js
 var Texture = (function() {
     Texture.fromElement = function(element) {
         var texture = new Texture(0, 0, gl.RGBA, gl.UNSIGNED_BYTE);
@@ -495,6 +623,7 @@ var Texture = (function() {
     };
 
     function Texture(width, height, format, type) {
+        this.gl = gl;
         this.id = gl.createTexture();
         this.width = width;
         this.height = height;
@@ -566,6 +695,9 @@ var Texture = (function() {
         gl.framebuffer = gl.framebuffer || gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, gl.framebuffer);
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.id, 0);
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+            throw new Error('incomplete framebuffer');
+        }
         gl.viewport(0, 0, this.width, this.height);
 
         // do the drawing
@@ -621,7 +753,7 @@ var Texture = (function() {
     return Texture;
 })();
 
-// src/filters\common.js
+// src/filters/common.js
 function warpShader(uniforms, warp) {
     return new Shader(null, uniforms + '\
     uniform sampler2D texture;\
@@ -647,7 +779,44 @@ var randomShaderFunc = '\
     }\
 ';
 
-// src/filters\adjust\brightness.js
+// src/filters/adjust/adjust.js
+/**
+ * @filter           Brightness / Contrast
+ * @description      Provides additive brightness and multiplicative contrast control.
+ * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
+ */
+function adjust(rmin, rmax, gmin, gmax, bmin, bmax) {
+    gl.adjust = gl.adjust || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float rmin;\
+        uniform float rmax;\
+        uniform float gmin;\
+        uniform float gmax;\
+        uniform float bmin;\
+        uniform float bmax;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            color.r = color.r * ((rmax - rmin) / 1.0) + rmin;\
+            color.g = color.g * ((gmax - gmin) / 1.0) + gmin;\
+            color.b = color.b * ((bmax - bmin) / 1.0) + bmin;\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.adjust, {
+        rmin: rmin / 255,
+        rmax: rmax / 255,
+        gmin: gmin / 255,
+        gmax: gmax / 255, 
+        bmin: bmin / 255,
+        bmax: bmax / 255
+    });
+
+    return this;
+}
+
+// src/filters/adjust/brightness.js
 /**
  * @filter           Brightness / Contrast
  * @description      Provides additive brightness and multiplicative contrast control.
@@ -672,40 +841,40 @@ function brightness(brightness) {
     return this;
 }
 
-// src/filters\adjust\brightnesscontrast.js
+// src/filters/adjust/color.js
 /**
  * @filter           Brightness / Contrast
  * @description      Provides additive brightness and multiplicative contrast control.
  * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
- * @param contrast   -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
  */
-function brightnessContrast(brightness, contrast) {
-    gl.brightnessContrast = gl.brightnessContrast || new Shader(null, '\
+function color(a,r,g,b) {
+    gl.color = gl.color || new Shader(null, '\
         uniform sampler2D texture;\
-        uniform float brightness;\
-        uniform float contrast;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
+        uniform float a;\
         varying vec2 texCoord;\
         void main() {\
             vec4 color = texture2D(texture, texCoord);\
-            color.rgb += brightness;\
-            if (contrast > 0.0) {\
-                color.rgb = (color.rgb - 0.5) / (1.0 - contrast) + 0.5;\
-            } else {\
-                color.rgb = (color.rgb - 0.5) * (1.0 + contrast) + 0.5;\
-            }\
+            color.r += r * a;\
+            color.g += g * a;\
+            color.b += b * a;\
             gl_FragColor = color;\
         }\
     ');
 
-    simpleShader.call(this, gl.brightnessContrast, {
-        brightness: clamp(-1, brightness, 1),
-        contrast: clamp(-1, contrast, 1)
+    simpleShader.call(this, gl.color, {
+       r  : r,
+       g  : g,
+       b  : b,
+       a  : a
     });
 
     return this;
 }
 
-// src/filters\adjust\contrast.js
+// src/filters/adjust/contrast.js
 /**
  * @filter           Contrast
  * @description      Provides multiplicative contrast control.
@@ -734,7 +903,7 @@ function contrast(contrast) {
     return this;
 }
 
-// src/filters\adjust\curves.js
+// src/filters/adjust/curves.js
 function splineInterpolate(points) {
     var interpolator = new SplineInterpolator(points);
     var array = [];
@@ -800,7 +969,7 @@ function curves(red, green, blue) {
     return this;
 }
 
-// src/filters\adjust\denoise.js
+// src/filters/adjust/denoise.js
 /**
  * @filter         Denoise
  * @description    Smooths over grainy noise in dark images using an 9x9 box filter
@@ -814,7 +983,6 @@ function denoise(exponent) {
     gl.denoise = gl.denoise || new Shader(null, '\
         uniform sampler2D texture;\
         uniform float exponent;\
-        uniform float strength;\
         uniform vec2 texSize;\
         varying vec2 texCoord;\
         void main() {\
@@ -845,9 +1013,59 @@ function denoise(exponent) {
     return this;
 }
 
-// src/filters\adjust\hue.js
+// src/filters/adjust/exposure.js
+/**
+ * @filter           Exposure
+ */
+function exposure(exposure) {
+    gl.exposure = gl.exposure || new Shader(null, '\
+        varying vec2 texCoord;\
+        uniform sampler2D texture;\
+        uniform highp float exposure;\
+        void main()\
+        {\
+            vec4 textureColor = texture2D(texture, texCoord);\
+            gl_FragColor = vec4(textureColor.rgb * pow(2.0, exposure), textureColor.a);\
+        }\
+    ');
 
-function hue(hue, saturation) {
+    simpleShader.call(this, gl.exposure, {
+        exposure: exposure
+    });
+
+    return this;
+}
+
+// src/filters/adjust/gamma.js
+/**
+ * @filter           Gamma
+ */
+function gamma(gamma) {
+    gl.gamma = gl.gamma || new Shader(null, '\
+        varying vec2 texCoord;\
+        uniform sampler2D texture;\
+        uniform highp float gamma;\
+        void main()\
+        {\
+            vec4 color = texture2D(texture, texCoord);\
+            color.r = pow(color.r, gamma);\
+            color.g = pow(color.g, gamma);\
+            color.b = pow(color.b, gamma);\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.gamma, {
+        gamma: gamma
+    });
+
+    return this;
+}
+
+// src/filters/adjust/hue.js
+
+function hue(hue) {
+
     gl.hue = gl.hue || new Shader(null, '\
         uniform sampler2D texture;\
         uniform float hue;\
@@ -870,69 +1088,14 @@ function hue(hue, saturation) {
         }\
     ');
 
-    hue = (1 + hue - 0.5) % 2 - 1;
-
     simpleShader.call(this, gl.hue, {
-        hue: clamp(-1, hue, 1)
+        hue: hue
     });
 
     return this;
 }
 
-// src/filters\adjust\huesaturation.js
-/**
- * @filter           Hue / Saturation
- * @description      Provides rotational hue and multiplicative saturation control. RGB color space
- *                   can be imagined as a cube where the axes are the red, green, and blue color
- *                   values. Hue changing works by rotating the color vector around the grayscale
- *                   line, which is the straight line from black (0, 0, 0) to white (1, 1, 1).
- *                   Saturation is implemented by scaling all color channel values either toward
- *                   or away from the average color channel value.
- * @param hue        -1 to 1 (-1 is 180 degree rotation in the negative direction, 0 is no change,
- *                   and 1 is 180 degree rotation in the positive direction)
- * @param saturation -1 to 1 (-1 is solid gray, 0 is no change, and 1 is maximum contrast)
- */
-function hueSaturation(hue, saturation) {
-    gl.hueSaturation = gl.hueSaturation || new Shader(null, '\
-        uniform sampler2D texture;\
-        uniform float hue;\
-        uniform float saturation;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            \
-            /* hue adjustment, wolfram alpha: RotationTransform[angle, {1, 1, 1}][{x, y, z}] */\
-            float angle = hue * 3.14159265;\
-            float s = sin(angle), c = cos(angle);\
-            vec3 weights = (vec3(2.0 * c, -sqrt(3.0) * s - c, sqrt(3.0) * s - c) + 1.0) / 3.0;\
-            float len = length(color.rgb);\
-            color.rgb = vec3(\
-                dot(color.rgb, weights.xyz),\
-                dot(color.rgb, weights.zxy),\
-                dot(color.rgb, weights.yzx)\
-            );\
-            \
-            /* saturation adjustment */\
-            float average = (color.r + color.g + color.b) / 3.0;\
-            if (saturation > 0.0) {\
-                color.rgb += (average - color.rgb) * (1.0 - 1.0 / (1.001 - saturation));\
-            } else {\
-                color.rgb += (average - color.rgb) * (-saturation);\
-            }\
-            \
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.hueSaturation, {
-        hue: clamp(-1, hue, 1),
-        saturation: clamp(-1, saturation, 1)
-    });
-
-    return this;
-}
-
-// src/filters\adjust\noise.js
+// src/filters/adjust/noise.js
 /**
  * @filter         Noise
  * @description    Adds black and white noise to the image.
@@ -965,7 +1128,7 @@ function noise(amount) {
     return this;
 }
 
-// src/filters\adjust\saturation.js
+// src/filters/adjust/saturation.js
 /**
  * @filter           Hue / Saturation
  * @description      Provides rotational hue and multiplicative saturation control. RGB color space
@@ -1005,7 +1168,7 @@ function saturation(saturation) {
     return this;
 }
 
-// src/filters\adjust\sepia.js
+// src/filters/adjust/sepia.js
 /**
  * @filter         Sepia
  * @description    Gives the image a reddish-brown monochrome tint that imitates an old photograph.
@@ -1037,7 +1200,124 @@ function sepia(amount) {
     return this;
 }
 
-// src/filters\adjust\unsharpmask.js
+// src/filters/adjust/sobel.js
+function sobel() {
+    gl.sobel = gl.sobel || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float bottomLeftIntensity = texture2D(texture, texCoord + vec2(-0.0015625, 0.0020833)).r;\
+            float topRightIntensity = texture2D(texture, texCoord + vec2(0.0015625, -0.0020833)).r;\
+            float topLeftIntensity = texture2D(texture, texCoord + vec2(-0.0015625, 0.0020833)).r;\
+            float bottomRightIntensity = texture2D(texture, texCoord + vec2(0.0015625, 0.0020833)).r;\
+            float leftIntensity = texture2D(texture, texCoord + vec2(-0.0015625, 0)).r;\
+            float rightIntensity = texture2D(texture, texCoord + vec2(0.0015625, 0)).r;\
+            float bottomIntensity = texture2D(texture, texCoord + vec2(0, 0.0020833)).r;\
+            float topIntensity = texture2D(texture, texCoord + vec2(0, -0.0020833)).r;\
+            float h = -topLeftIntensity - 2.0 * topIntensity - topRightIntensity + bottomLeftIntensity + 2.0 * bottomIntensity + bottomRightIntensity;\
+            float v = -bottomLeftIntensity - 2.0 * leftIntensity - topLeftIntensity + bottomRightIntensity + 2.0 * rightIntensity + topRightIntensity;\
+\
+            float mag = length(vec2(h, v));\
+            color.r = mag;\
+            color.g = mag;\
+            color.b = mag;\
+\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.sobel, {
+
+    });
+
+    return this;
+}
+// src/filters/adjust/softContrast.js
+/**
+ * @filter           Contrast
+ * @description      Provides multiplicative contrast control.
+ * @param contrast   0 to 4 ( 1 is no change,)
+ */
+function softContrast(contrast) {
+    gl.softContrast = gl.softContrast || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float contrast;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            color.r = (color.r - 0.5) * contrast + 0.5;\
+            color.g = (color.g - 0.5) * contrast + 0.5;\
+            color.b = (color.b - 0.5) * contrast + 0.5;\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.softContrast, {
+        contrast: contrast
+    });
+
+    return this;
+}
+
+// src/filters/adjust/toHSV.js
+function toHSV() {
+    gl.toHSV = gl.toHSV || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            if (texCoord.y > 0.5){\
+            float min = color.r;\
+            float max = color.r;\
+\
+            if (color.g < min){\
+                min = color.g;\
+            }   \
+            if (color.g > max){\
+                max = color.g;\
+            }\
+            if (color.b < min){\
+                min = color.b;\
+            }\
+            if (color.b > max){\
+                max = color.b;\
+            }\
+\
+            float delta = max - min;\
+            float s = 0.0;\
+            float h = 0.0;\
+            float v = max;\
+            if (max != 0.0) {\
+                s = delta / max;\
+                if (color. r == max) {\
+                    h = (color.g - color.b) / delta;\
+                }\
+                else if (color.g == max){\
+                    h = 2.0 + (color.b - color.r) / delta;\
+                }\
+                else {\
+                    h = 4.0 + (color.r - color.g) / delta;\
+                }\
+                h = h * 60.0;\
+                if (h < 0.0)\
+                    h = h + 360.0;\
+            }\
+            color.r = h / 360.0;\
+            color.g = s;\
+            color.b = v;\
+        }\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.toHSV, {
+
+    });
+
+    return this;
+}
+// src/filters/adjust/unsharpmask.js
 /**
  * @filter         Unsharp Mask
  * @description    A form of image sharpening that amplifies high-frequencies in the image. It
@@ -1080,7 +1360,7 @@ function unsharpMask(radius, strength) {
     return this;
 }
 
-// src/filters\adjust\vibrance.js
+// src/filters/adjust/vibrance.js
 /**
  * @filter       Vibrance
  * @description  Modifies the saturation of desaturated colors, leaving saturated colors unmodified.
@@ -1108,17 +1388,21 @@ function vibrance(amount) {
     return this;
 }
 
-// src/filters\adjust\vignette.js
+// src/filters/adjust/vignette.js
 /**
  * @filter         Vignette
  * @description    Adds a simulated lens edge darkening effect.
  * @param size     0 to 1 (0 for center of frame, 1 for edge of frame)
  * @param amount   0 to 1 (0 for no effect, 1 for maximum lens darkening)
+ *   color.rgb *= smoothstep(0.8, size * 0.799, dist * (amount + size));\
  */
-function vignette(size, amount, centerX, centerY) {
+function vignette(size, amount, centerX, centerY, r, g, b) {
     gl.vignette = gl.vignette || new Shader(null, '\
         uniform sampler2D texture;\
         uniform float size;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
         uniform float amount;\
         uniform vec2 center;\
         varying vec2 texCoord;\
@@ -1126,22 +1410,41 @@ function vignette(size, amount, centerX, centerY) {
             vec4 color = texture2D(texture, texCoord);\
             \
             float dist = distance(texCoord, center);\
-            color.rgb *= smoothstep(0.8, size * 0.799, dist * (amount + size));\
-            \
+            float d = 1.6 - dist - (amount + size * 0.799);\
+            if (d <= 1.0)\
+            {\
+                color.r *= d;\
+                color.g *= d;\
+                color.b *= d;\
+                color.r += (1.0 - d) * r;\
+                color.g += (1.0 - d) * g;\
+                color.b += (1.0 - d) * b;\
+            }\
             gl_FragColor = color;\
         }\
     ');
 
+    // back compatibility
+    if (r > 1 || g > 1 || b > 1)
+    {
+        r = r / 255;
+        g = g / 255;
+        b = b / 255;
+    }
+
     simpleShader.call(this, gl.vignette, {
         size: clamp(0, size, 1),
         amount: clamp(0, amount, 1),
-        center : [centerX, centerY]
+        center : [centerX, centerY],
+        r : r,
+        g : g,
+        b : b
     });
 
     return this;
 }
 
-// src/filters\blur\lensblur.js
+// src/filters/blur/lensblur.js
 /**
  * @filter           Lens Blur
  * @description      Imitates a camera capturing the image out of focus by using a blur that generates
@@ -1251,7 +1554,7 @@ function lensBlur(radius, brightness, angle) {
     return this;
 }
 
-// src/filters\blur\tiltshift.js
+// src/filters/blur/tiltshift.js
 /**
  * @filter               Tilt Shift
  * @description          Simulates the shallow depth of field normally encountered in close-up
@@ -1331,7 +1634,7 @@ function tiltShift(startX, startY, endX, endY, blurRadius, gradientRadius) {
     return this;
 }
 
-// src/filters\blur\triangleblur.js
+// src/filters/blur/triangleblur.js
 /**
  * @filter       Triangle Blur
  * @description  This is the most basic blur filter, which convolves the image with a
@@ -1381,7 +1684,7 @@ function triangleBlur(radius) {
     return this;
 }
 
-// src/filters\blur\zoomblur.js
+// src/filters/blur/zoomblur.js
 /**
  * @filter         Zoom Blur
  * @description    Blurs the image away from a certain point, which looks like radial motion blur.
@@ -1434,7 +1737,7 @@ function zoomBlur(centerX, centerY, strength) {
     return this;
 }
 
-// src/filters\fun\colorhalftone.js
+// src/filters/fun/colorhalftone.js
 /**
  * @filter        Color Halftone
  * @description   Simulates a CMYK halftone rendering of the image by multiplying pixel values
@@ -1486,7 +1789,7 @@ function colorHalftone(centerX, centerY, angle, size) {
     return this;
 }
 
-// src/filters\fun\dotscreen.js
+// src/filters/fun/dotscreen.js
 /**
  * @filter        Dot Screen
  * @description   Simulates a black and white halftone rendering of the image by multiplying
@@ -1532,7 +1835,7 @@ function dotScreen(centerX, centerY, angle, size) {
     return this;
 }
 
-// src/filters\fun\edgework.js
+// src/filters/fun/edgework.js
 /**
  * @filter       Edge Work
  * @description  Picks out different frequencies in the image by subtracting two
@@ -1607,7 +1910,57 @@ function edgeWork(radius) {
     return this;
 }
 
-// src/filters\fun\hexagonalpixelate.js
+// src/filters/fun/gradient.js
+
+function gradiant() { /* x, y, x2,y2, sR, sG, sB, sA, eR, eG, eB, eA*/
+    gl.gradiant = gl.gradiant || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        uniform float x;\
+        uniform float y;\
+        uniform float x2;\
+        uniform float y2;\
+        uniform float sR;\
+        uniform float sG;\
+        uniform float sB;\
+        uniform float sA;\
+        uniform float eR;\
+        uniform float eG;\
+        uniform float eB;\
+        uniform float eA;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float d = (y2 - y) / (x2 - x);\
+            float rx = (-d * x + y - texCoord.y - 1.0 / d) / (-1.0 / d - d);\
+            float ry = (-1.0 / d) * rx + texCoord.x + 1.0 / d;\
+            float D = distance(vec2(x, y), vec2(rx, ry));\
+            color.r = ((1.0 - D) * sR + D * eR) * sA + color.r * (1.0 - sA);\
+            color.g = ((1.0 - D) * sG + D * eG) * sA + color.g * (1.0 - sA);\
+            color.b = ((1.0 - D) * sB + D * eB) * sA + color.b * (1.0 - sA);\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    
+    simpleShader.call(this, gl.gradiant, {
+        x : 0.1,
+        y : 0.1,
+        x2 : 0.9,
+        y2 : 0.9,
+        sR : 1.0,
+        sG : 1.0,
+        sB : 1.0,
+        sA : 1.0,
+        eR : 0.0,
+        eG : 0.0,
+        eB : 0.0,
+        eA : 1.0
+    });
+
+    return this;
+}
+
+// src/filters/fun/hexagonalpixelate.js
 /**
  * @filter        Hexagonal Pixelate
  * @description   Renders the image using a pattern of hexagonal tiles. Tile colors
@@ -1667,6 +2020,474 @@ function hexagonalPixelate(centerX, centerY, scale) {
 
     return this;
 }
+
+// src/filters/fun/ink.js
+/**
+ * @filter         Ink
+ * @description    Simulates outlining the image in ink by darkening edges stronger than a
+ *                 certain threshold. The edge detection value is the difference of two
+ *                 copies of the image, each blurred using a blur of a different radius.
+ * @param strength The multiplicative scale of the ink edges. Values in the range 0 to 1
+ *                 are usually sufficient, where 0 doesn't change the image and 1 adds lots
+ *                 of black edges. Negative strength values will create white ink edges
+ *                 instead of black ones.
+ */
+function ink(strength) {
+    gl.ink = gl.ink || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float strength;\
+        uniform vec2 texSize;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec2 dx = vec2(1.0 / texSize.x, 0.0);\
+            vec2 dy = vec2(0.0, 1.0 / texSize.y);\
+            vec4 color = texture2D(texture, texCoord);\
+            float bigTotal = 0.0;\
+            float smallTotal = 0.0;\
+            vec3 bigAverage = vec3(0.0);\
+            vec3 smallAverage = vec3(0.0);\
+            for (float x = -2.0; x <= 2.0; x += 1.0) {\
+                for (float y = -2.0; y <= 2.0; y += 1.0) {\
+                    vec3 sample = texture2D(texture, texCoord + dx * x + dy * y).rgb;\
+                    bigAverage += sample;\
+                    bigTotal += 1.0;\
+                    if (abs(x) + abs(y) < 2.0) {\
+                        smallAverage += sample;\
+                        smallTotal += 1.0;\
+                    }\
+                }\
+            }\
+            vec3 edge = max(vec3(0.0), bigAverage / bigTotal - smallAverage / smallTotal);\
+            gl_FragColor = vec4(color.rgb - dot(edge, edge) * strength * 100000.0, color.a);\
+        }\
+    ');
+
+    simpleShader.call(this, gl.ink, {
+        strength: strength * strength * strength * strength * strength,
+        texSize: [this.width, this.height]
+    });
+
+    return this;
+}
+
+// src/filters/fun/invertColor.js
+
+function invertColor() {
+    gl.invertColor = gl.invertColor || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            color.rgb = 1.0 - color.rgb;\
+            gl_FragColor = color;\
+        }\
+    ');
+    simpleShader.call(this, gl.invertColor, {});
+    return this;
+}
+// src/filters/fun/mirror.js
+/**
+ * @filter           Mirror
+ * @description      mirror rhe image horizontaly
+ */
+function mirror() {
+    gl.mirror = gl.mirror || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float brightness;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, vec2(1.0 - texCoord.x,texCoord.y));\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.mirror, {  
+    });
+
+    return this;
+}
+// src/filters/fun/noise.js
+/**
+ * @filter       Vibrance
+ * @description  Modifies the saturation of desaturated colors, leaving saturated colors unmodified.
+ * @param amount -1 to 1 (-1 is minimum vibrance, 0 is no change, and 1 is maximum vibrance)
+ */
+function tvNoise(amount) {
+    gl.noise = gl.noise || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float amount;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float x = texCoord.x * texCoord.y; \
+            x = mod(x, 13.0) * mod(x, 123.0); \
+            float dx = mod(x, 0.006); \
+            vec3 res = color.rgb + color.rgb * clamp(0.1 + dx * 100.0, 0.0, amount); \
+            vec2 sc = vec2(sin(texCoord.y * 300.1),cos(texCoord.y * 300.1));\
+            res += color.rgb * vec3(sc.x, sc.y, sc.x) * 0.3;\
+            res = mix(color.rgb, res, 1.0);\
+            gl_FragColor = vec4(res, 1.0);\
+        }\
+    ');
+
+    simpleShader.call(this, gl.noise, {
+        amount: amount
+    });
+
+    return this;
+}
+
+// src/filters/fun/outlineInk.js
+
+function outlineInk(min, max) {
+    gl.outlineInk = gl.outlineInk || new Shader(null, '\
+    uniform sampler2D texture;\
+    uniform float minDelta; \
+    uniform float maxDelta; \
+    uniform vec3 inkColor;\
+    varying vec2 texCoord;\
+    uniform vec2 texSize;\
+void main()\
+{\
+    vec2 dx = vec2(1.0 / texSize.x, 0.0);\
+    vec2 dy = vec2(0.0, 1.0 / texSize.y);\
+    vec3 c0 = texture2D(texture, texCoord).rgb;\
+    vec3 c1 = texture2D(texture, texCoord + dx).rgb;\
+    vec3 c2 = texture2D(texture, texCoord + dy).rgb;\
+    vec3 c3 = texture2D(texture, texCoord - dx).rgb;\
+    vec3 c4 = texture2D(texture, texCoord - dy).rgb;\
+    float distance1 = (abs(c0.r - c1.r) + abs(c0.g - c1.g) + abs(c0.b - c1.b)) / 3.0;\
+    float distance2 = (abs(c0.r - c2.r) + abs(c0.g - c2.g) + abs(c0.b - c2.b)) / 3.0;\
+    float distance3 = (abs(c0.r - c3.r) + abs(c0.g - c3.g) + abs(c0.b - c3.b)) / 3.0;\
+    float distance4 = (abs(c0.r - c4.r) + abs(c0.g - c4.g) + abs(c0.b - c4.b)) / 3.0;\
+    float maxdistance = max(max(distance1, distance2), max(distance3, distance4));\
+    if (maxdistance > minDelta && maxdistance < maxDelta) {\
+        c0 = inkColor;\
+    }\
+    gl_FragColor = vec4(c0, 1.0);\
+}');
+
+    simpleShader.call(this, gl.outlineInk, {
+        minDelta : min / 255,
+        maxDelta : max / 255,
+        inkColor : [0,0,0],
+        backColor : [1.0,1.0,1.0],
+        texSize : [this.x, this.y]
+    });
+
+    return this;
+}
+
+    //else if (maxdistance > maxDelta){\
+    //    c0 = c0 + (inkColor - c0) * ((maxdistance - maxDelta) / (minDelta - maxDelta));\
+    //}\
+
+
+
+// src/filters/fun/simpleThreshold.js
+
+function simpleThreshold(threshold) {
+    gl.threshold = gl.threshold || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float threshold;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float average = (color.r + color.g + color.b) / 3.0;\
+            if (average < threshold)\
+              {\
+                color.r = 0.0;\
+                color.g = 0.0;\
+                color.b = 0.0;\
+              } \
+            else\
+             {\
+                 color.r = 1.0;\
+                 color.g = 1.0;\
+                 color.b = 1.0;\
+              }\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.threshold, {
+        threshold: clamp(0, threshold / 255, 1.0)
+    });
+
+    return this;
+}
+// src/filters/fun/threshold.js
+
+function threshold(threshold, alpha, primaryR, primaryG, primaryB, secondaryR, secondaryG,secondaryB) {
+    gl.threshold = gl.threshold || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float threshold;\
+        uniform float alpha;\
+        uniform float primaryR;\
+        uniform float primaryG;\
+        uniform float primaryB;\
+        uniform float secondaryR;\
+        uniform float secondaryG;\
+        uniform float secondaryB;\
+\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float average = (color.r + color.g + color.b) / 3.0;\
+            if (average < threshold)\
+              {\
+                color.r = primaryR + (1.0 - alpha) * color.r;\
+                color.g = primaryG + (1.0 - alpha) * color.g;\
+                color.b = primaryB + (1.0 - alpha) * color.b;\
+              } \
+            else\
+             {\
+                 color.r = alpha * secondaryR + (1.0 - alpha) * color.r;\
+                 color.g = alpha * secondaryG + (1.0 - alpha) * color.g;\
+                 color.b = alpha * secondaryB + (1.0 - alpha) * color.b;\
+              }\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.threshold, {
+        threshold: clamp(0, threshold, 1.0),
+        alpha : alpha,
+        primaryR : primaryR / 255,
+        primaryG : primaryG / 255,
+        primaryB : primaryB / 255,
+        secondaryR : secondaryR / 255,
+        secondaryG : secondaryG / 255,
+        secondaryB : secondaryB / 255
+    });
+
+    return this;
+}
+
+// src/filters/fun/watter.js
+/**
+ * @filter        Watter
+ * @description   Simulates Watter
+ *
+ * @param angle default : 7, the angle of the wave generator
+ * @param speed default : 0.3 the speed of the waves
+ */
+
+ var TIMECOUNT = 0;
+
+function watter(angle, speed) 
+{
+
+    gl.watter = gl.watter || new Shader(null, '\
+uniform sampler2D texture;\
+uniform float time;\
+uniform vec2 texSize;\
+uniform float angle;\
+uniform float speed;\
+const float PI = 3.1415926535897932;\
+const float speed_x = 0.3;\
+const float speed_y = 0.3;\
+const float intensity = 3.;\
+const int steps = 8;\
+const float frequency = 4.0;\
+const float delta = 20.;\
+const float intence = 400.;\
+const float emboss = 0.3;\
+  float col(vec2 coord)\
+  {\
+    float delta_theta = 2.0 * PI / float(angle);\
+    float col = 0.0;\
+    float theta = 0.0;\
+    for (int i = 0; i < steps; i++)\
+    {\
+      vec2 adjc = coord;\
+      theta = delta_theta*float(i);\
+      adjc.x += cos(theta)*time*speed + time * speed_x;\
+      adjc.y -= sin(theta)*time*speed - time * speed_y;\
+      col = col + cos( (adjc.x*cos(theta) - adjc.y*sin(theta))*frequency)*intensity;\
+    }\
+    return cos(col);\
+  }\
+void main(void)\
+{\
+vec2 p = (gl_FragCoord.xy) / texSize.xy, c1 = p, c2 = p;\
+float cc1 = col(c1);\
+c2.x += texSize.x/delta;\
+float dx = emboss*(cc1-col(c2))/delta;\
+c2.x = p.x;\
+c2.y += texSize.y/delta;\
+float dy = emboss*(cc1-col(c2))/delta;\
+c1.x += dx;\
+c1.y = -(c1.y+dy);\
+float alpha = 1.+dot(dx,dy)*intence;\
+gl_FragColor = texture2D(texture, p)*(alpha);\
+}');
+
+    
+    var now = new Date();
+    now = now.getTime();
+
+    if (!TIMECOUNT)
+        TIMECOUNT = now;    
+        simpleShader.call(this, gl.watter, {
+            time: (now - TIMECOUNT) / 1000.0,
+            texSize : [this.width, this.height],
+            angle : angle,
+            speed : speed
+        })
+    
+
+    
+
+    return this;
+}
+// src/filters/warp/bulgepinch.js
+/**
+ * @filter         Bulge / Pinch
+ * @description    Bulges or pinches the image in a circle.
+ * @param centerX  The x coordinate of the center of the circle of effect.
+ * @param centerY  The y coordinate of the center of the circle of effect.
+ * @param radius   The radius of the circle of effect.
+ * @param strength -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge)
+ */
+function bulgePinch(centerX, centerY, radius, strength) {
+    gl.bulgePinch = gl.bulgePinch || warpShader('\
+        uniform float radius;\
+        uniform float strength;\
+        uniform vec2 center;\
+    ', '\
+        coord -= center;\
+        float distance = length(coord);\
+        if (distance < radius) {\
+            float percent = distance / radius;\
+            if (strength > 0.0) {\
+                coord *= mix(1.0, smoothstep(0.0, radius / distance, percent), strength * 0.75);\
+            } else {\
+                coord *= mix(1.0, pow(percent, 1.0 + strength * 0.75) * radius / distance, 1.0 - percent);\
+            }\
+        }\
+        coord += center;\
+    ');
+
+    simpleShader.call(this, gl.bulgePinch, {
+        radius: radius,
+        strength: clamp(-1, strength, 1),
+        center: [centerX, centerY],
+        texSize: [this.width, this.height]
+    });
+
+    return this;
+}
+
+// src/filters/warp/matrixwarp.js
+/**
+ * @filter                Matrix Warp
+ * @description           Transforms an image by a 2x2 or 3x3 matrix. The coordinates used in
+ *                        the transformation are (x, y) for a 2x2 matrix or (x, y, 1) for a
+ *                        3x3 matrix, where x and y are in units of pixels.
+ * @param matrix          A 2x2 or 3x3 matrix represented as either a list or a list of lists.
+ *                        For example, the 3x3 matrix [[2,0,0],[0,3,0],[0,0,1]] can also be
+ *                        represented as [2,0,0,0,3,0,0,0,1] or just [2,0,0,3].
+ * @param inverse         A boolean value that, when true, applies the inverse transformation
+ *                        instead. (optional, defaults to false)
+ * @param useTextureSpace A boolean value that, when true, uses texture-space coordinates
+ *                        instead of screen-space coordinates. Texture-space coordinates range
+ *                        from -1 to 1 instead of 0 to width - 1 or height - 1, and are easier
+ *                        to use for simple operations like flipping and rotating.
+ */
+function matrixWarp(matrix, inverse, useTextureSpace) {
+    gl.matrixWarp = gl.matrixWarp || warpShader('\
+        uniform mat3 matrix;\
+        uniform bool useTextureSpace;\
+    ', '\
+        if (useTextureSpace) coord = coord / texSize * 2.0 - 1.0;\
+        vec3 warp = matrix * vec3(coord, 1.0);\
+        coord = warp.xy / warp.z;\
+        if (useTextureSpace) coord = (coord * 0.5 + 0.5) * texSize;\
+    ');
+
+    // Flatten all members of matrix into one big list
+    matrix = Array.prototype.concat.apply([], matrix);
+
+    // Extract a 3x3 matrix out of the arguments
+    if (matrix.length == 4) {
+        matrix = [
+            matrix[0], matrix[1], 0,
+            matrix[2], matrix[3], 0,
+            0, 0, 1
+        ];
+    } else if (matrix.length != 9) {
+        throw 'can only warp with 2x2 or 3x3 matrix';
+    }
+
+    simpleShader.call(this, gl.matrixWarp, {
+        matrix: inverse ? getInverse(matrix) : matrix,
+        texSize: [this.width, this.height],
+        useTextureSpace: useTextureSpace | 0
+    });
+
+    return this;
+}
+
+// src/filters/warp/perspective.js
+/**
+ * @filter       Perspective
+ * @description  Warps one quadrangle to another with a perspective transform. This can be used to
+ *               make a 2D image look 3D or to recover a 2D image captured in a 3D environment.
+ * @param before The x and y coordinates of four points before the transform in a flat list. This
+ *               would look like [ax, ay, bx, by, cx, cy, dx, dy] for four points (ax, ay), (bx, by),
+ *               (cx, cy), and (dx, dy).
+ * @param after  The x and y coordinates of four points after the transform in a flat list, just
+ *               like the other argument.
+ */
+function perspective(before, after) {
+    var a = getSquareToQuad.apply(null, after);
+    var b = getSquareToQuad.apply(null, before);
+    var c = multiply(getInverse(a), b);
+    return this.matrixWarp(c);
+}
+
+// src/filters/warp/swirl.js
+/**
+ * @filter        Swirl
+ * @description   Warps a circular region of the image in a swirl.
+ * @param centerX The x coordinate of the center of the circular region.
+ * @param centerY The y coordinate of the center of the circular region.
+ * @param radius  The radius of the circular region.
+ * @param angle   The angle in radians that the pixels in the center of
+ *                the circular region will be rotated by.
+ */
+function swirl(centerX, centerY, radius, angle) {
+    gl.swirl = gl.swirl || warpShader('\
+        uniform float radius;\
+        uniform float angle;\
+        uniform vec2 center;\
+    ', '\
+        coord -= center;\
+        float distance = length(coord);\
+        if (distance < radius) {\
+            float percent = (radius - distance) / radius;\
+            float theta = percent * percent * angle;\
+            float s = sin(theta);\
+            float c = cos(theta);\
+            coord = vec2(\
+                coord.x * c - coord.y * s,\
+                coord.x * s + coord.y * c\
+            );\
+        }\
+        coord += center;\
+    ');
+
+    simpleShader.call(this, gl.swirl, {
+        radius: radius,
+        center: [centerX, centerY],
+        angle: angle,
+        texSize: [this.width, this.height]
+    });
+
+    return this;
+}
+
 
 // src/filters\fun\incrust.js
 
@@ -2166,106 +2987,7 @@ function incrustStep3() {
 
     return this;
 }
-        /*
 
-            uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            color.rgb = 1.0 - color.rgb;\
-            gl_FragColor = color;\
-        }\    */ 
-// src/filters\fun\ink.js
-/**
- * @filter         Ink
- * @description    Simulates outlining the image in ink by darkening edges stronger than a
- *                 certain threshold. The edge detection value is the difference of two
- *                 copies of the image, each blurred using a blur of a different radius.
- * @param strength The multiplicative scale of the ink edges. Values in the range 0 to 1
- *                 are usually sufficient, where 0 doesn't change the image and 1 adds lots
- *                 of black edges. Negative strength values will create white ink edges
- *                 instead of black ones.
- */
-function ink(strength) {
-    gl.ink = gl.ink || new Shader(null, '\
-        uniform sampler2D texture;\
-        uniform float strength;\
-        uniform vec2 texSize;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec2 dx = vec2(1.0 / texSize.x, 0.0);\
-            vec2 dy = vec2(0.0, 1.0 / texSize.y);\
-            vec4 color = texture2D(texture, texCoord);\
-            float bigTotal = 0.0;\
-            float smallTotal = 0.0;\
-            vec3 bigAverage = vec3(0.0);\
-            vec3 smallAverage = vec3(0.0);\
-            for (float x = -2.0; x <= 2.0; x += 1.0) {\
-                for (float y = -2.0; y <= 2.0; y += 1.0) {\
-                    vec3 sample = texture2D(texture, texCoord + dx * x + dy * y).rgb;\
-                    bigAverage += sample;\
-                    bigTotal += 1.0;\
-                    if (abs(x) + abs(y) < 2.0) {\
-                        smallAverage += sample;\
-                        smallTotal += 1.0;\
-                    }\
-                }\
-            }\
-            vec3 edge = max(vec3(0.0), bigAverage / bigTotal - smallAverage / smallTotal);\
-            gl_FragColor = vec4(color.rgb - dot(edge, edge) * strength * 100000.0, color.a);\
-        }\
-    ');
-
-    simpleShader.call(this, gl.ink, {
-        strength: strength * strength * strength * strength * strength,
-        texSize: [this.width, this.height]
-    });
-
-    return this;
-}
-
-// src/filters\fun\invertColor.js
-
-function invertColor() {
-    gl.invertColor = gl.invertColor || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            color.rgb = 1.0 - color.rgb;\
-            gl_FragColor = color;\
-        }\
-    ');
-    simpleShader.call(this, gl.invertColor, {});
-    return this;
-}
-// src/filters\fun\mirror.js
-/**
- * @filter           Mirror
- * @description      mirror rhe image horizontaly
- */
-function mirror() {
-    gl.mirror = gl.mirror || new Shader(null, '\
-        uniform sampler2D texture;\
-        uniform float brightness;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, vec2(1.0 - texCoord.x,texCoord.y));\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.mirror, {  
-    });
-
-    return this;
-}
-// src/filters\fun\mov.js
-/**
- * @filter           Brightness / Contrast
- * @description      Provides additive brightness and multiplicative contrast control.
- * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
- */
 function move(para) {
     gl.move = gl.move || new Shader(null, '\
         uniform sampler2D texture;\
@@ -2289,325 +3011,6 @@ function move(para) {
         }\
     ');
     simpleShader.call(this, gl.move, { para : para});
-
-    return this;
-}
-
-// src/filters\fun\outlineInk.js
-
-function outlineInk(min, max) {
-    gl.outlineInk = gl.outlineInk || new Shader(null, '\
-    uniform sampler2D texture;\
-    uniform float minDelta; \
-    uniform float maxDelta; \
-    uniform vec3 inkColor;\
-    varying vec2 texCoord;\
-    uniform vec2 texSize;\
-void main()\
-{\
-    vec2 dx = vec2(1.0 / texSize.x, 0.0);\
-    vec2 dy = vec2(0.0, 1.0 / texSize.y);\
-    vec3 c0 = texture2D(texture, texCoord).rgb;\
-    vec3 c1 = texture2D(texture, texCoord + dx).rgb;\
-    vec3 c2 = texture2D(texture, texCoord + dy).rgb;\
-    vec3 c3 = texture2D(texture, texCoord - dx).rgb;\
-    vec3 c4 = texture2D(texture, texCoord - dy).rgb;\
-    float distance1 = (abs(c0.r - c1.r) + abs(c0.g - c1.g) + abs(c0.b - c1.b)) / 3.0;\
-    float distance2 = (abs(c0.r - c2.r) + abs(c0.g - c2.g) + abs(c0.b - c2.b)) / 3.0;\
-    float distance3 = (abs(c0.r - c3.r) + abs(c0.g - c3.g) + abs(c0.b - c3.b)) / 3.0;\
-    float distance4 = (abs(c0.r - c4.r) + abs(c0.g - c4.g) + abs(c0.b - c4.b)) / 3.0;\
-    float maxdistance = max(max(distance1, distance2), max(distance3, distance4));\
-    if (maxdistance > minDelta && maxdistance < maxDelta) {\
-        c0 = inkColor;\
-    }\
-    gl_FragColor = vec4(c0, 1.0);\
-}');
-
-    simpleShader.call(this, gl.outlineInk, {
-        minDelta : min / 255,
-        maxDelta : max / 255,
-        inkColor : [0,0,0],
-        backColor : [1.0,1.0,1.0],
-        texSize : [this.x, this.y]
-    });
-
-    return this;
-}
-
-    //else if (maxdistance > maxDelta){\
-    //    c0 = c0 + (inkColor - c0) * ((maxdistance - maxDelta) / (minDelta - maxDelta));\
-    //}\
-
-
-
-// src/filters\fun\threshold.js
-
-function threshold(threshold, alpha, primaryR, primaryG, primaryB, secondaryR, secondaryG,secondaryB) {
-    gl.threshold = gl.threshold || new Shader(null, '\
-        uniform sampler2D texture;\
-        uniform float threshold;\
-        uniform float alpha;\
-        uniform float primaryR;\
-        uniform float primaryG;\
-        uniform float primaryB;\
-        uniform float secondaryR;\
-        uniform float secondaryG;\
-        uniform float secondaryB;\
-\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            float average = (color.r + color.g + color.b) / 3.0;\
-            if (average < threshold)\
-              {\
-                color.r = primaryR + (1.0 - alpha) * color.r;\
-                color.g = primaryG + (1.0 - alpha) * color.g;\
-                color.b = primaryB + (1.0 - alpha) * color.b;\
-              } \
-            else\
-             {\
-                 color.r = alpha * secondaryR + (1.0 - alpha) * color.r;\
-                 color.g = alpha * secondaryG + (1.0 - alpha) * color.g;\
-                 color.b = alpha * secondaryB + (1.0 - alpha) * color.b;\
-              }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.threshold, {
-        threshold: clamp(0, threshold / 255, 1.0),
-        alpha : alpha,
-        primaryR : primaryR / 255,
-        primaryG : primaryG / 255,
-        primaryB : primaryB / 255,
-        secondaryR : secondaryR / 255,
-        secondaryG : secondaryG / 255,
-        secondaryB : secondaryB / 255
-    });
-
-    return this;
-}
-
-// src/filters\fun\watter.js
-/**
- * @filter        Watter
- * @description   Simulates Watter
- *
- * @param angle default : 7, the angle of the wave generator
- * @param speed default : 0.3 the speed of the waves
- */
-
- var TIMECOUNT = 0;
-
-function watter(angle, speed) 
-{
-
-    gl.watter = gl.watter || new Shader(null, '\
-uniform sampler2D texture;\
-uniform float time;\
-uniform vec2 texSize;\
-uniform float angle;\
-uniform float speed;\
-const float PI = 3.1415926535897932;\
-const float speed_x = 0.3;\
-const float speed_y = 0.3;\
-const float intensity = 3.;\
-const int steps = 8;\
-const float frequency = 4.0;\
-const float delta = 20.;\
-const float intence = 400.;\
-const float emboss = 0.3;\
-  float col(vec2 coord)\
-  {\
-    float delta_theta = 2.0 * PI / float(angle);\
-    float col = 0.0;\
-    float theta = 0.0;\
-    for (int i = 0; i < steps; i++)\
-    {\
-      vec2 adjc = coord;\
-      theta = delta_theta*float(i);\
-      adjc.x += cos(theta)*time*speed + time * speed_x;\
-      adjc.y -= sin(theta)*time*speed - time * speed_y;\
-      col = col + cos( (adjc.x*cos(theta) - adjc.y*sin(theta))*frequency)*intensity;\
-    }\
-    return cos(col);\
-  }\
-void main(void)\
-{\
-vec2 p = (gl_FragCoord.xy) / texSize.xy, c1 = p, c2 = p;\
-float cc1 = col(c1);\
-c2.x += texSize.x/delta;\
-float dx = emboss*(cc1-col(c2))/delta;\
-c2.x = p.x;\
-c2.y += texSize.y/delta;\
-float dy = emboss*(cc1-col(c2))/delta;\
-c1.x += dx;\
-c1.y = -(c1.y+dy);\
-float alpha = 1.+dot(dx,dy)*intence;\
-gl_FragColor = texture2D(texture, p)*(alpha);\
-}');
-
-    
-    var now = new Date();
-    now = now.getTime();
-
-    if (!TIMECOUNT)
-        TIMECOUNT = now;    
-        simpleShader.call(this, gl.watter, {
-            time: (now - TIMECOUNT) / 1000.0,
-            texSize : [this.width, this.height],
-            angle : angle,
-            speed : speed
-        })
-    
-
-    
-
-    return this;
-}
-// src/filters\warp\bulgepinch.js
-/**
- * @filter         Bulge / Pinch
- * @description    Bulges or pinches the image in a circle.
- * @param centerX  The x coordinate of the center of the circle of effect.
- * @param centerY  The y coordinate of the center of the circle of effect.
- * @param radius   The radius of the circle of effect.
- * @param strength -1 to 1 (-1 is strong pinch, 0 is no effect, 1 is strong bulge)
- */
-function bulgePinch(centerX, centerY, radius, strength) {
-    gl.bulgePinch = gl.bulgePinch || warpShader('\
-        uniform float radius;\
-        uniform float strength;\
-        uniform vec2 center;\
-    ', '\
-        coord -= center;\
-        float distance = length(coord);\
-        if (distance < radius) {\
-            float percent = distance / radius;\
-            if (strength > 0.0) {\
-                coord *= mix(1.0, smoothstep(0.0, radius / distance, percent), strength * 0.75);\
-            } else {\
-                coord *= mix(1.0, pow(percent, 1.0 + strength * 0.75) * radius / distance, 1.0 - percent);\
-            }\
-        }\
-        coord += center;\
-    ');
-
-    simpleShader.call(this, gl.bulgePinch, {
-        radius: radius,
-        strength: clamp(-1, strength, 1),
-        center: [centerX, centerY],
-        texSize: [this.width, this.height]
-    });
-
-    return this;
-}
-
-// src/filters\warp\matrixwarp.js
-/**
- * @filter                Matrix Warp
- * @description           Transforms an image by a 2x2 or 3x3 matrix. The coordinates used in
- *                        the transformation are (x, y) for a 2x2 matrix or (x, y, 1) for a
- *                        3x3 matrix, where x and y are in units of pixels.
- * @param matrix          A 2x2 or 3x3 matrix represented as either a list or a list of lists.
- *                        For example, the 3x3 matrix [[2,0,0],[0,3,0],[0,0,1]] can also be
- *                        represented as [2,0,0,0,3,0,0,0,1] or just [2,0,0,3].
- * @param inverse         A boolean value that, when true, applies the inverse transformation
- *                        instead. (optional, defaults to false)
- * @param useTextureSpace A boolean value that, when true, uses texture-space coordinates
- *                        instead of screen-space coordinates. Texture-space coordinates range
- *                        from -1 to 1 instead of 0 to width - 1 or height - 1, and are easier
- *                        to use for simple operations like flipping and rotating.
- */
-function matrixWarp(matrix, inverse, useTextureSpace) {
-    gl.matrixWarp = gl.matrixWarp || warpShader('\
-        uniform mat3 matrix;\
-        uniform bool useTextureSpace;\
-    ', '\
-        if (useTextureSpace) coord = coord / texSize * 2.0 - 1.0;\
-        vec3 warp = matrix * vec3(coord, 1.0);\
-        coord = warp.xy / warp.z;\
-        if (useTextureSpace) coord = (coord * 0.5 + 0.5) * texSize;\
-    ');
-
-    // Flatten all members of matrix into one big list
-    matrix = Array.prototype.concat.apply([], matrix);
-
-    // Extract a 3x3 matrix out of the arguments
-    if (matrix.length == 4) {
-        matrix = [
-            matrix[0], matrix[1], 0,
-            matrix[2], matrix[3], 0,
-            0, 0, 1
-        ];
-    } else if (matrix.length != 9) {
-        throw 'can only warp with 2x2 or 3x3 matrix';
-    }
-
-    simpleShader.call(this, gl.matrixWarp, {
-        matrix: inverse ? getInverse(matrix) : matrix,
-        texSize: [this.width, this.height],
-        useTextureSpace: useTextureSpace | 0
-    });
-
-    return this;
-}
-
-// src/filters\warp\perspective.js
-/**
- * @filter       Perspective
- * @description  Warps one quadrangle to another with a perspective transform. This can be used to
- *               make a 2D image look 3D or to recover a 2D image captured in a 3D environment.
- * @param before The x and y coordinates of four points before the transform in a flat list. This
- *               would look like [ax, ay, bx, by, cx, cy, dx, dy] for four points (ax, ay), (bx, by),
- *               (cx, cy), and (dx, dy).
- * @param after  The x and y coordinates of four points after the transform in a flat list, just
- *               like the other argument.
- */
-function perspective(before, after) {
-    var a = getSquareToQuad.apply(null, after);
-    var b = getSquareToQuad.apply(null, before);
-    var c = multiply(getInverse(a), b);
-    return this.matrixWarp(c);
-}
-
-// src/filters\warp\swirl.js
-/**
- * @filter        Swirl
- * @description   Warps a circular region of the image in a swirl.
- * @param centerX The x coordinate of the center of the circular region.
- * @param centerY The y coordinate of the center of the circular region.
- * @param radius  The radius of the circular region.
- * @param angle   The angle in radians that the pixels in the center of
- *                the circular region will be rotated by.
- */
-function swirl(centerX, centerY, radius, angle) {
-    gl.swirl = gl.swirl || warpShader('\
-        uniform float radius;\
-        uniform float angle;\
-        uniform vec2 center;\
-    ', '\
-        coord -= center;\
-        float distance = length(coord);\
-        if (distance < radius) {\
-            float percent = (radius - distance) / radius;\
-            float theta = percent * percent * angle;\
-            float s = sin(theta);\
-            float c = cos(theta);\
-            coord = vec2(\
-                coord.x * c - coord.y * s,\
-                coord.x * s + coord.y * c\
-            );\
-        }\
-        coord += center;\
-    ');
-
-    simpleShader.call(this, gl.swirl, {
-        radius: radius,
-        center: [centerX, centerY],
-        angle: angle,
-        texSize: [this.width, this.height]
-    });
 
     return this;
 }

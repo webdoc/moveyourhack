@@ -235,7 +235,7 @@
 				if (navigator.getUserMedia)
 				{
 					navigator.getUserMedia(
-						{audio: true, video: true}, 
+						{audio: false, video: true}, 
 						function(stream) 
 						{
 							userMedia.video.src = window.URL.createObjectURL(stream);

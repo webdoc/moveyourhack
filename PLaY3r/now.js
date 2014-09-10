@@ -340,6 +340,13 @@ exports.canvas = function() {
     canvas.color = wrap(color);
     canvas.noise = wrap(noise);
     canvas.adjust = wrap(adjust);
+    canvas.skin = wrap(skin);
+    canvas.stipple = wrap(stipple);
+    canvas.dotStipple = wrap(dotStipple);
+    canvas.quincunxStipple = wrap(quincunxStipple);
+    canvas.gammaRGB = wrap(gammaRGB);
+    
+    canvas.blendAdd = wrap(blendAdd);
 
     canvas.incrust = wrap(incrust);
     canvas.incrustStep0 = wrap(incrustStep0);
@@ -352,7 +359,6 @@ exports.canvas = function() {
     canvas.incrustPre = wrap(incrustPre);
     canvas.toHSV = wrap(toHSV);
     canvas.move = wrap(move);
-
 
     return canvas;
 };
@@ -479,6 +485,8 @@ var Shader = (function() {
                 }
             } else if (isNumber(value)) {
                 gl.uniform1f(location, value);
+             } else if (isNumber(parseFloat(value))) {
+                gl.uniform1f(location, parseFloat(value));
             } else {
                 throw 'attempted to set uniform "' + name + '" to invalid value ' + (value || 'undefined').toString();
             }
@@ -1005,7 +1013,7 @@ function denoise(exponent) {
     // Perform two iterations for stronger results
     for (var i = 0; i < 2; i++) {
         simpleShader.call(this, gl.denoise, {
-            exponent: Math.max(0, exponent),
+            exponent: Math.max(0, exponent * 100),
             texSize: [this.width, this.height]
         });
     }
@@ -1062,6 +1070,49 @@ function gamma(gamma) {
     return this;
 }
 
+// src/filters/adjust/gammaRGB.js
+/**
+ * @filter           Gamma
+ */
+
+//FE Component transfert
+function gammaRGB(amplitudeR, exponentR, offsetR ,amplitudeG,exponentG, offsetG, amplitudeB,exponentB, offsetB) {
+    gl.gammaRGB = gl.gammaRGB || new Shader(null, '\
+        varying vec2 texCoord;\
+        uniform sampler2D texture;\
+        uniform highp float amplitudeR;\
+        uniform highp float amplitudeG;\
+        uniform highp float amplitudeB;\
+        uniform highp float exponentR;\
+        uniform highp float exponentG;\
+        uniform highp float exponentB;\
+        uniform highp float offsetR;\
+        uniform highp float offsetG;\
+        uniform highp float offsetB;\
+        void main()\
+        {\
+            vec4 color = texture2D(texture, texCoord);\
+            color.r = amplitudeR * pow(color.r, exponentR) + offsetR;\
+            color.g = amplitudeG * pow(color.g, exponentG) + offsetG;\
+            color.b = amplitudeB * pow(color.b, exponentB) + offsetB;\
+            gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.gammaRGB, {
+      amplitudeR : amplitudeR,
+      amplitudeG : amplitudeG,
+      amplitudeB : amplitudeB,
+      exponentR : exponentR,
+      exponentG : exponentG,
+      exponentB : exponentB,
+      offsetR : offsetR,
+      offsetG : offsetG,
+      offsetB : offsetB
+    });
+
+    return this;
+}
 // src/filters/adjust/hue.js
 
 function hue(hue) {
@@ -1201,9 +1252,20 @@ function sepia(amount) {
 }
 
 // src/filters/adjust/sobel.js
-function sobel() {
+function sobel(secondary, coef, alpha, r,g,b,a, r2,g2,b2, a2) {
     gl.sobel = gl.sobel || new Shader(null, '\
         uniform sampler2D texture;\
+        uniform float alpha;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
+        uniform float r2;\
+        uniform float g2;\
+        uniform float b2;\
+        uniform float a2;\
+        uniform float a;\
+        uniform float secondary;\
+        uniform float coef;\
         varying vec2 texCoord;\
         void main() {\
             vec4 color = texture2D(texture, texCoord);\
@@ -1215,20 +1277,41 @@ function sobel() {
             float rightIntensity = texture2D(texture, texCoord + vec2(0.0015625, 0)).r;\
             float bottomIntensity = texture2D(texture, texCoord + vec2(0, 0.0020833)).r;\
             float topIntensity = texture2D(texture, texCoord + vec2(0, -0.0020833)).r;\
-            float h = -topLeftIntensity - 2.0 * topIntensity - topRightIntensity + bottomLeftIntensity + 2.0 * bottomIntensity + bottomRightIntensity;\
-            float v = -bottomLeftIntensity - 2.0 * leftIntensity - topLeftIntensity + bottomRightIntensity + 2.0 * rightIntensity + topRightIntensity;\
+            float h = -secondary * topLeftIntensity - coef * topIntensity - secondary * topRightIntensity + secondary * bottomLeftIntensity + coef * bottomIntensity + secondary * bottomRightIntensity;\
+            float v = -secondary * bottomLeftIntensity - coef * leftIntensity - secondary * topLeftIntensity + secondary * bottomRightIntensity + coef * rightIntensity + secondary * topRightIntensity;\
 \
             float mag = length(vec2(h, v));\
-            color.r = mag;\
-            color.g = mag;\
-            color.b = mag;\
-\
+            if (mag < 0.5) {\
+                float al = alpha * a;\
+                color.rgb *= (1.0 - al);\
+                color.r += r * al;\
+                color.g += g * al;\
+                color.b += b * al;\
+                color.rgb += al * mag;\
+            } else { \
+                float al = alpha * a2;\
+                color.rgb *= (1.0 - al);\
+                color.r += r2 * al;\
+                color.g += g2 * al;\
+                color.b += b2 * al;\
+                color.rgb += al * mag;\
+            }\
             gl_FragColor = color;\
         }\
     ');
-
+    console.log(arguments);
     simpleShader.call(this, gl.sobel, {
-
+        secondary : secondary,
+        coef : coef,
+        alpha : alpha,
+        r : r / 255,
+        g : g / 255,
+        b : b / 255,
+        a : a,
+        r2 : r2 / 255,
+        g2 : g2 / 255,
+        b2 : b2 / 255,
+        a2: a2
     });
 
     return this;
@@ -1440,6 +1523,67 @@ function vignette(size, amount, centerX, centerY, r, g, b) {
         g : g,
         b : b
     });
+
+    return this;
+}
+
+
+// src/filters\fun\mov.js
+/**
+ * @filter           Brightness / Contrast
+ * @description      Provides additive brightness and multiplicative contrast control.
+ * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
+ */
+function move(para) {
+    gl.move = gl.move || new Shader(null, '\
+        uniform sampler2D texture;\
+        uniform float brightness;\
+        varying vec2 texCoord;\
+        uniform float para; \
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            if (texCoord.y < 0.5)\
+            {\
+                vec4 color2 = texture2D(texture, vec2(texCoord.x, texCoord.y + 0.5));\
+                float d = abs(color2.r - color.r) +  abs(color2.g - color.g) +  abs(color2.b - color.b);\
+                d = d * 1.5;\
+                color = vec4(d,d,d,1.0);\
+                if (d < para)\
+                {\
+                    color = vec4(0.0,0.0,0.0,1.0);\
+                }\
+            }\
+            gl_FragColor = color;\
+        }\
+    ');
+    simpleShader.call(this, gl.move, { para : para});
+
+    return this;
+}
+
+
+// src/filters/blend/add.js
+/**
+ * @filter           Brightness / Contrast
+ * @description      Provides additive brightness and multiplicative contrast control.
+ * @param brightness -1 to 1 (-1 is solid black, 0 is no change, and 1 is solid white)
+ */
+function blendAdd() {
+    gl.blendAdd = gl.blendAdd || new Shader(null, '\
+        uniform sampler2D texture;\
+ \
+        varying vec2 texCoord;\
+        void main() {\
+          vec4 color = texture2D(texture, texCoord);\
+          if (texCoord.y < 0.5) {\
+            vec4 colorb = texture2D(texture, vec2(texCoord.x, texCoord.y + 0.5));\
+            color.rgb += colorb;\
+          }\
+          gl_FragColor = color;\
+        }\
+    ');
+
+    simpleShader.call(this, gl.blendAdd, {});
 
     return this;
 }
@@ -1737,6 +1881,124 @@ function zoomBlur(centerX, centerY, strength) {
     return this;
 }
 
+// src/filters/effect/stipple.js
+
+function stipple(r,g,b,a, iteration) {
+    gl.stipple = gl.stipple || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
+        uniform float a;\
+        uniform float iteration;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            if (mod(int((texCoord.x + texCoord.y) * iteration), 2) == 0) {\
+                gl_FragColor = vec4( \
+                    color.r * (1.0 - a) + r * a, \
+                    color.g * (1.0 - a) + g * a, \
+                    color.b * (1.0 - a) + b * a, \
+                    color.a);\
+            } else {\
+               gl_FragColor = color;\
+            }\
+        }\
+    ');
+
+    simpleShader.call(this, gl.stipple, {
+        r : r / 255,
+        g : g / 255,
+        b : b / 255,
+        a : a,
+        iteration : iteration
+    });
+
+    return this;
+}
+
+
+
+function dotStipple(r,g,b,a, iteration) {
+    gl.dotStipple = gl.dotStipple || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
+        uniform float a;\
+        uniform float iteration;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            if ( mod(int((texCoord.x) * iteration), 2.0) == 0 && int(mod(((texCoord.y) * iteration), 2.0)) == 0) {\
+                gl_FragColor = vec4( \
+                    color.r * (1.0 - a) + r * a, \
+                    color.g * (1.0 - a) + g * a, \
+                    color.b * (1.0 - a) + b * a, \
+                    color.a);\
+            } else {\
+               gl_FragColor = color;\
+            }\
+        }\
+    ');
+
+    simpleShader.call(this, gl.dotStipple, {
+        r : r / 255,
+        g : g / 255,
+        b : b / 255,
+        a : a,
+        iteration : iteration
+    });
+
+    return this;
+}
+
+
+
+function quincunxStipple(r,g,b,a, iteration) {
+    gl.dotStipple = gl.dotStipple || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        uniform float r;\
+        uniform float g;\
+        uniform float b;\
+        uniform float a;\
+        uniform float iteration;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            if ( \
+                (int(mod(((texCoord.x) * iteration), 4.0)) == 0 \
+                && int(mod(((texCoord.y) * iteration), 4.0)) == 0)\
+                || (int(mod(((texCoord.x) * iteration + 1.0), 4.0)) == 0 \
+                && int(mod(((texCoord.y) * iteration), 4.0)) == 0)\
+                || (int(mod(((texCoord.x) * iteration - 1.0), 4.0)) == 0 \
+                && int(mod(((texCoord.y) * iteration), 4.0)) == 0)\
+                || (int(mod(((texCoord.x) * iteration), 4.0)) == 0 \
+                && int(mod(((texCoord.y) * iteration + 1.0), 4.0)) == 0)\
+                || (int(mod(((texCoord.x) * iteration), 4.0)) == 0 \
+                && int(mod(((texCoord.y) * iteration - 1.0), 4.0)) == 0)\
+    ) {\
+                gl_FragColor = vec4( \
+                    color.r * (1.0 - a) + r * a, \
+                    color.g * (1.0 - a) + g * a, \
+                    color.b * (1.0 - a) + b * a, \
+                    color.a);\
+            } else {\
+               gl_FragColor = color;\
+            }\
+        }\
+    ');
+
+    simpleShader.call(this, gl.dotStipple, {
+        r : r / 255,
+        g : g / 255,
+        b : b / 255,
+        a : a,
+        iteration : iteration
+    });
+
+    return this;
+}
 // src/filters/fun/colorhalftone.js
 /**
  * @filter        Color Halftone
@@ -1748,11 +2010,13 @@ function zoomBlur(centerX, centerY, strength) {
  * @param angle   The rotation of the pattern in radians.
  * @param size    The diameter of a dot in pixels.
  */
-function colorHalftone(centerX, centerY, angle, size) {
+function colorHalftone(centerX, centerY, angle, size, min, max) {
     gl.colorHalftone = gl.colorHalftone || new Shader(null, '\
         uniform sampler2D texture;\
         uniform vec2 center;\
         uniform float angle;\
+        uniform float thresholdmin;\
+        uniform float thresholdmax;\
         uniform float scale;\
         uniform vec2 texSize;\
         varying vec2 texCoord;\
@@ -1769,12 +2033,21 @@ function colorHalftone(centerX, centerY, angle, size) {
         \
         void main() {\
             vec4 color = texture2D(texture, texCoord);\
-            vec3 cmy = 1.0 - color.rgb;\
-            float k = min(cmy.x, min(cmy.y, cmy.z));\
-            cmy = (cmy - k) / (1.0 - k);\
-            cmy = clamp(cmy * 10.0 - 3.0 + vec3(pattern(angle + 0.26179), pattern(angle + 1.30899), pattern(angle)), 0.0, 1.0);\
-            k = clamp(k * 10.0 - 5.0 + pattern(angle + 0.78539), 0.0, 1.0);\
-            gl_FragColor = vec4(1.0 - cmy - k, color.a);\
+            float seuil = max(max(color.r, color.g), max(color.r, color.b)) - min(min(color.r, color.g), min(color.r, color.b));\
+            if (\
+               seuil > thresholdmin && \
+                (seuil < 0.058823 ||  color.r < 0.372549 || color.g < 0.156862 || color.b < 0.078431 || color.r < color.g || color.r < color.b || (color.r - color.g > -0.058823 && color.r - color.g < 0.058823))\
+            ) {\
+                vec3 cmy = 1.0 - color.rgb;\
+                float k = min(cmy.x, min(cmy.y, cmy.z));\
+                cmy = (cmy - k) / (1.0 - k);\
+                cmy = clamp(cmy * 10.0 - 3.0 + vec3(pattern(angle + 0.26179), pattern(angle + 1.30899), pattern(angle)), 0.0, 1.0);\
+                k = clamp(k * 10.0 - 5.0 + pattern(angle + 0.78539), 0.0, 1.0);\
+                gl_FragColor = vec4(1.0 - cmy - k, color.a);\
+            }\
+            else {\
+                 gl_FragColor = color;\
+            }\
         }\
     ');
 
@@ -1783,7 +2056,9 @@ function colorHalftone(centerX, centerY, angle, size) {
         center: [centerX, centerY],
         angle: angle,
         scale: Math.PI / size,
-        texSize: [this.width, this.height]
+        texSize: [this.width, this.height],
+        thresholdmin : min,
+        thresholdmax : max
     });
 
     return this;
@@ -1798,12 +2073,14 @@ function colorHalftone(centerX, centerY, angle, size) {
  * @param centerY The y coordinate of the pattern origin.
  * @param angle   The rotation of the pattern in radians.
  * @param size    The diameter of a dot in pixels.
+ * @param alpha   The alpha of pixels
  */
-function dotScreen(centerX, centerY, angle, size) {
+function dotScreen(centerX, centerY, angle, size, alpha) {
     gl.dotScreen = gl.dotScreen || new Shader(null, '\
         uniform sampler2D texture;\
         uniform vec2 center;\
         uniform float angle;\
+        uniform float alpha;\
         uniform float scale;\
         uniform vec2 texSize;\
         varying vec2 texCoord;\
@@ -1821,7 +2098,10 @@ function dotScreen(centerX, centerY, angle, size) {
         void main() {\
             vec4 color = texture2D(texture, texCoord);\
             float average = (color.r + color.g + color.b) / 3.0;\
-            gl_FragColor = vec4(vec3(average * 10.0 - 5.0 + pattern()), color.a);\
+            average = average * 10.0 - 5.0 + pattern();\
+            color.rgb *= (1.0 - alpha);\
+            color.rgb += alpha * average;\
+            gl_FragColor = color;\
         }\
     ');
 
@@ -1829,7 +2109,8 @@ function dotScreen(centerX, centerY, angle, size) {
         center: [centerX, centerY],
         angle: angle,
         scale: Math.PI / size,
-        texSize: [this.width, this.height]
+        texSize: [this.width, this.height],
+        alpha : alpha
     });
 
     return this;
@@ -1912,7 +2193,7 @@ function edgeWork(radius) {
 
 // src/filters/fun/gradient.js
 
-function gradiant() { /* x, y, x2,y2, sR, sG, sB, sA, eR, eG, eB, eA*/
+function gradiant(x, y, x2,y2, sR, sG, sB, sA, eR, eG, eB, eA) { /* x, y, x2,y2, sR, sG, sB, sA, eR, eG, eB, eA*/
     gl.gradiant = gl.gradiant || new Shader(null, '\
         uniform sampler2D texture;\
         varying vec2 texCoord;\
@@ -1969,11 +2250,12 @@ function gradiant() { /* x, y, x2,y2, sR, sG, sB, sA, eR, eG, eB, eA*/
  * @param centerY The y coordinate of the pattern center.
  * @param scale   The width of an individual tile, in pixels.
  */
-function hexagonalPixelate(centerX, centerY, scale) {
+function hexagonalPixelate(centerX, centerY, scale, alpha) {
     gl.hexagonalPixelate = gl.hexagonalPixelate || new Shader(null, '\
         uniform sampler2D texture;\
         uniform vec2 center;\
         uniform float scale;\
+        uniform float alpha;\
         uniform vec2 texSize;\
         varying vec2 texCoord;\
         void main() {\
@@ -2008,14 +2290,19 @@ function hexagonalPixelate(centerX, centerY, scale) {
             choice.x += choice.y * 0.5;\
             choice.y *= 0.866025404;\
             choice *= scale / texSize;\
-            gl_FragColor = texture2D(texture, choice + center / texSize);\
+            vec4 color = texture2D(texture, texCoord);\
+            vec4 color2 = texture2D(texture, choice + center / texSize);\
+            color *= (1.0 - alpha);\
+            color += alpha * color2;\
+            gl_FragColor = color;\
         }\
     ');
 
     simpleShader.call(this, gl.hexagonalPixelate, {
         center: [centerX, centerY],
         scale: scale,
-        texSize: [this.width, this.height]
+        texSize: [this.width, this.height],
+        alpha : alpha
     });
 
     return this;
@@ -2069,7 +2356,6 @@ function ink(strength) {
 
     return this;
 }
-
 // src/filters/fun/invertColor.js
 
 function invertColor() {
@@ -2212,6 +2498,41 @@ function simpleThreshold(threshold) {
 
     simpleShader.call(this, gl.threshold, {
         threshold: clamp(0, threshold / 255, 1.0)
+    });
+
+    return this;
+}
+// src/filters/fun/skin.js
+/**
+ * @filter         Skin
+ * @description    Filters-out pixels not matching skin color.
+ * from: 
+ * Human skin color clustering for face detection
+ * J. Kovac, P. Peer, F. Solina - 2003
+ */
+function skin() {
+    gl.skin = gl.skin || new Shader(null, '\
+        uniform sampler2D texture;\
+        varying vec2 texCoord;\
+        void main() {\
+            vec4 color = texture2D(texture, texCoord);\
+            float r = color.r;\
+            float g = color.g;\
+            float b = color.b;\
+            \
+            if ((r>45.0/255.0)&&(g>40.0/255.0)&&(b>20.0/255.0)\
+                &&(r>g)&&(r>b)\
+                &&(r-min(g,b)>15.0/255.0)\
+                &&(abs(r-g)>15.0/255.0)){\
+                gl_FragColor = color;\
+            } else {\
+                gl_FragColor = vec4(0.0,0.0,0.0,color.a);\
+            }\
+        }\
+    ');
+
+    simpleShader.call(this, gl.skin, {
+        amount: clamp(0, 1)
     });
 
     return this;
@@ -2484,533 +2805,6 @@ function swirl(centerX, centerY, radius, angle) {
         angle: angle,
         texSize: [this.width, this.height]
     });
-
-    return this;
-}
-
-
-// src/filters\fun\incrust.js
-
-function incrust() {
-    gl.incrust = gl.incrust|| new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            vec4 colorn =  texture2D(texture, texCoord + vec2(0, 0.25));\
-            vec4 colorb =  texture2D(texture, texCoord + vec2(0, 0.75));\
-            if (texCoord.y < 0.25){ \
-                if (abs(color.r - colorn.r) + abs(color.g - colorn.g) + abs(color.b - colorn.b) > 0.15){\
-                    int count = 0;\
-                    float pxWidth = 0.001562;\
-                    float pxHeight = 0.000521;\
-                    vec4 c = texture2D(texture, texCoord + vec2(0, pxHeight));\
-                    vec4 cn = texture2D(texture, texCoord + vec2(0, pxHeight + 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.20) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord - vec2(0, -pxHeight));\
-                    cn = texture2D(texture, texCoord + vec2(0, -pxHeight + 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.20) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord - vec2(pxWidth, 0));\
-                    cn = texture2D(texture, texCoord - vec2(pxWidth, 0) + vec2(0, 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.20) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord + vec2(-pxWidth, 0));\
-                    cn = texture2D(texture, texCoord + vec2(-pxWidth, 0) + vec2(0, 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.20) {\
-                        count++;\
-                    }\
-                    if (count > 2){\
-                        colorb = color;\
-                    }\
-                } \
-            }\
-            gl_FragColor = colorb;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrust, {
-
-    });
-
-    return this;
-}
-
-function incrustStep0() {
-    gl.incrustStep0 = gl.incrustStep0 || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            if (texCoord.y > 0.5 && texCoord.y < 0.75){ \
-                vec4 balance    = vec4(0.0,0.0,0.0,0.0);\
-                vec4 neutral    = texture2D(texture, vec2(0.0, 0.25));\
-                vec4 unbalanced = texture2D(texture, vec2(0.0, 0.5));\
-                balance.r += unbalanced.r - neutral.r;\
-                balance.g += unbalanced.g - neutral.g;\
-                balance.b += unbalanced.g - neutral.b;\
-                neutral    = texture2D(texture, vec2(0.1, 0.35));\
-                unbalanced = texture2D(texture, vec2(0.1, 0.6));\
-                balance.r += unbalanced.r - neutral.r;\
-                balance.g += unbalanced.g - neutral.g;\
-                balance.b += unbalanced.g - neutral.b;\
-                neutral    = texture2D(texture, vec2(0.9, 0.35));\
-                unbalanced = texture2D(texture, vec2(0.9, 0.6));\
-                balance.r += unbalanced.r - neutral.r;\
-                balance.g += unbalanced.g - neutral.g;\
-                balance.b += unbalanced.g - neutral.b;\
-                neutral    = texture2D(texture, vec2(1.0, 0.25));\
-                unbalanced = texture2D(texture, vec2(1.0, 0.5));\
-                balance.r += unbalanced.r - neutral.r;\
-                balance.g += unbalanced.g - neutral.g;\
-                balance.b += unbalanced.g - neutral.b;\
-                color.r += balance.r / 5.0;\
-                color.g += balance.g / 5.0;\
-                color.b += balance.b / 5.0;\
-            }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep0, {
-
-    });
-
-    return this;
-}
-
-// transform to BW
-function incrustStep1() {
-    gl.incrustStep1 = gl.incrustStep1|| new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            vec4 colorn =  texture2D(texture, texCoord + vec2(0, 0.25));\
-            vec4 colorb =  color;\
-            if (texCoord.y >0.5 && texCoord.y < 0.75){ \
-                colorb =  vec4(0.0,0.0,0.0,1.0);\
-                if (abs(color.r - colorn.r) + abs(color.g - colorn.g) + abs(color.b - colorn.b) > 0.05){\
-                    int count = 0;\
-                    float pxWidth = 0.001562;\
-                    float pxHeight = 0.000521;\
-                    vec4 c = texture2D(texture, texCoord + vec2(0, pxHeight - 0.5));\
-                    vec4 cn = texture2D(texture, texCoord + vec2(0, pxHeight + 0.25 - 0.5));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.05) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord + vec2(0, -pxHeight - 0.5));\
-                    cn = texture2D(texture, texCoord + vec2(0, -pxHeight + 0.25 - 0.5));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.05) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord + vec2(pxWidth, -0.5));\
-                    cn = texture2D(texture, texCoord + vec2(pxWidth, -0.5) + vec2(0, 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.05) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord + vec2(-pxWidth, -0.5));\
-                    cn = texture2D(texture, texCoord + vec2(-pxWidth, -0.5) + vec2(0, 0.25));\
-                    if (abs(c.r - cn.r) + abs(c.g - cn.g) + abs(c.b - cn.b) > 0.05) {\
-                        count++;\
-                    }\
-                    if (count > 2){\
-                        colorb =  vec4(1.0,1.0,1.0,1.0);;\
-                    }\
-                } \
-            }\
-            gl_FragColor = colorb;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep1, {
-
-    });
-
-    return this;
-}
-
-function incrustPre(contrast) {
-    gl.incrustPre = gl.incrustPre || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            if (texCoord.y > 0.25 && texCoord.y < 0.75)\
-                color.rgb = (color.rgb - 0.5) / (1.3) + 0.5;\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustPre, {
-    });
-    return this;
-}
-
-
-// transform to BW
-function incrustStep1b() {
-    gl.incrustStep1 = gl.incrustStep1|| new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            vec4 colorn =  texture2D(texture, texCoord + vec2(0, -0.25));\
-            vec4 colorb =  color;\
-            if (texCoord.y >0.5 && texCoord.y < 0.75){ \
-                colorb =  vec4(0.0,0.0,0.0,1.0);\
-                float deltaR = color.r - colorn.r;\
-                float deltaG = color.g - colorn.g;\
-                float deltaB = color.b - colorn.b;\
-                float deltaRG = abs(color.r - color.g) - abs(colorn.r - colorn.g);\
-                float deltaGB = abs(color.g - color.b) - abs(colorn.g - colorn.b);\
-                float deltaBR = abs(color.b - color.r) - abs(colorn.b - colorn.r);\
-                float ratio = 0.7;\
-                float dist = distance(texCoord, vec2(0.5, 0.625));\
-                float delta = (abs(deltaR) + abs(deltaB) + abs(deltaG)) * 3.0 + (abs(deltaRG) + abs(deltaGB) + abs(deltaBR)) + (0.5 - dist) * 0.5;\
-                if (delta > ratio){\
-                   colorb =  vec4(1.0,1.0,1.0,delta);\
-                }\
-            }\
-            gl_FragColor = colorb;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep1, {
-
-    });
-
-    return this;
-}
-
-// transform to BW
-function incrustStep1c() {
-    gl.incrustStep1 = gl.incrustStep1|| new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            vec4 colorn =  texture2D(texture, texCoord + vec2(0, -0.25));\
-            vec4 colorb =  color;\
-            if (texCoord.y >0.5 && texCoord.y < 0.75){ \
-                colorb =  vec4(0.0,0.0,0.0,1.0);\
-                float min = color.r;\
-                float max = color.r;\
-\
-                if (color.g < min){\
-                    min = color.g;\
-                }   \
-                if (color.g > max){\
-                    max = color.g;\
-                }\
-                if (color.b < min){\
-                    min = color.b;\
-                }\
-                if (color.b > max){\
-                    max = color.b;\
-                }\
-\
-                float delta = max - min;\
-                float s = 0.0;\
-                float h = 0.0;\
-                float v = max;\
-                if (max != 0.0) {\
-                    s = delta / max;\
-                    if (color. r == max) {\
-                        h = (color.g - color.b) / delta;\
-                    }\
-                    else if (color.g == max){\
-                        h = 2.0 + (color.b - color.r) / delta;\
-                    }\
-                    else {\
-                        h = 4.0 + (color.r - color.g) / delta;\
-                    }\
-                    h = h * 60.0;\
-                    if (h < 0.0)\
-                        h = h + 360.0;\
-                }\
-\
-                float minn = colorn.r;\
-                float maxn = colorn.r;\
-\
-                if (colorn.g < minn){\
-                    minn = colorn.g;\
-                }   \
-                if (colorn.g > maxn){\
-                    maxn = colorn.g;\
-                }\
-                if (colorn.b < minn){\
-                    minn = colorn.b;\
-                }\
-                if (colorn.b > maxn){\
-                    maxn = colorn.b;\
-                }\
-\
-                float deltan = maxn - minn;\
-                float sn = 0.0;\
-                float hn = 0.0;\
-                float vn = maxn;\
-                if (maxn != 0.0) {\
-                    sn = deltan / maxn;\
-                    if (colorn. r == maxn) {\
-                        hn = (colorn.g - colorn.b) / deltan;\
-                    }\
-                    else if (colorn.g == maxn){\
-                        hn = 2.0 + (colorn.b - colorn.r) / deltan;\
-                    }\
-                    else {\
-                        hn = 4.0 + (colorn.r - colorn.g) / deltan;\
-                    }\
-                    hn = hn * 60.0;\
-                    if (hn < 0.0)\
-                        hn = hn + 360.0;\
-                }\
-                float deltaH = h - hn;\
-                float deltaS = s - sn;\
-                float deltaV = v - vn;\
-                float deltaR = color.r - colorn.r;\
-                float deltaG = color.g - colorn.g;\
-                float deltaB = color.b - colorn.b;\
-                float deltaRG = abs(color.r - color.g) - abs(colorn.r - colorn.g);\
-                float deltaGB = abs(color.g - color.b) - abs(colorn.g - colorn.b);\
-                float deltaBR = abs(color.b - color.r) - abs(colorn.b - colorn.r);\
-                float ratio = 0.7;\
-                float dist = distance(texCoord, vec2(0.5, 0.625));\
-                float deltaHSV = (abs(deltaH) + abs(deltaS) + abs(deltaV)) * 0.005;\
-                if (colorn.r + colorn.g + colorn.b > 2.0){\
-                    deltaHSV = 0.0;\
-                }\
-                delta = deltaHSV + (abs(deltaR) + abs(deltaB) + abs(deltaG)) * 3.0 + (abs(deltaRG) + abs(deltaGB) + abs(deltaBR)) + (0.5 - dist) * 0.5;\
-                if (delta > ratio){\
-                   colorb =  vec4(1.0,1.0,1.0,delta);\
-                }\
-            }\
-            gl_FragColor = colorb;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep1, {
-
-    });
-
-    return this;
-}
-
-
-function incrustStep2b() {
-    gl.incrustStep2b = gl.incrustStep2b || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-             if (texCoord.y > 0.5 && texCoord.y < 0.75){ \
-                int count = 0;\
-                float pxWidth = 0.001562;\
-                float pxHeight = 0.000521;\
-                vec4 c = texture2D(texture, texCoord + vec2(0, pxHeight * 5.0));\
-                if (c.r != color.r) {\
-                    c = texture2D(texture, texCoord + vec2(0, -pxHeight * 5.0));\
-                    if (c.r != color.r) {\
-                     count += 1;\
-                    }\
-                }\
-                if (count == 0) {\
-                   c = texture2D(texture, texCoord + vec2(pxWidth * 5.0, 0));\
-                    if (c.r != color.r) {\
-                        c = texture2D(texture, texCoord + vec2(-pxWidth * 5.0, 0));\
-                        if (c.r != color.r) {\
-                         count += 1;\
-                        }\
-                    }\
-                }\
-                if (count == 0) {\
-                   c = texture2D(texture, texCoord + vec2(0, pxHeight * 3.0));\
-                    if (c.r != color.r) {\
-                        c = texture2D(texture, texCoord + vec2(0, -pxHeight * 3.0));\
-                        if (c.r != color.r) {\
-                         count += 1;\
-                        }\
-                    }\
-                }\
-                if (count == 0) {\
-                   c = texture2D(texture, texCoord + vec2(pxWidth * 3.0, 0));\
-                    if (c.r != color.r) {\
-                        c = texture2D(texture, texCoord + vec2(-pxWidth * 3.0, 0));\
-                        if (c.r != color.r) {\
-                         count += 1;\
-                        }\
-                    }\
-                }\
-                if (color.r == 1.0 && count == 1) {\
-                  color = vec4(0.0,0.0,0.0,1.0);\
-                }\
-                else if (color.r == 0.0 && count == 1) {\
-                  color = vec4(1.0,1.0,1.0,1.0);\
-                }\
-            }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep2b, {
-
-    });
-
-    return this;
-}
-
-function incrustStep2() {
-    gl.incrustStep2 = gl.incrustStep2 || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-             if (texCoord.y > 0.5 && texCoord.y < 0.75){ \
-                if (color.r == 1.0){\
-                    int count = 0;\
-                    float pxWidth = 0.001562;\
-                    float pxHeight = 0.000521;\
-                    vec4 c = texture2D(texture, texCoord + vec2(0, pxHeight));\
-                    if (c.r != color.r) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord - vec2(0, pxHeight));\
-                       if (c.r != color.r) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord - vec2(pxWidth, 0));\
-                     if (c.r != color.r) {\
-                        count++;\
-                    }\
-                    c = texture2D(texture, texCoord + vec2(pxWidth, 0));\
-                    if (c.r != color.r) {\
-                        count++;\
-                    }\
-                    if (count > 1){\
-                        color =  vec4(0.0,0.0,0.0,0.0);\
-                    }\
-                } \
-            }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep2, {
-
-    });
-
-    return this;
-}
-
-
-function toHSV() {
-    gl.toHSV = gl.toHSV || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            if (texCoord.y > 0.25 && texCoord.y < 0.75){\
-            float min = color.r;\
-            float max = color.r;\
-\
-            if (color.g < min){\
-                min = color.g;\
-            }   \
-            if (color.g > max){\
-                max = color.g;\
-            }\
-            if (color.b < min){\
-                min = color.b;\
-            }\
-            if (color.b > max){\
-                max = color.b;\
-            }\
-\
-            float delta = max - min;\
-            float s = 0.0;\
-            float h = 0.0;\
-            float v = max;\
-            if (max != 0.0) {\
-                s = delta / max;\
-                if (color. r == max) {\
-                    h = (color.g - color.b) / delta;\
-                }\
-                else if (color.g == max){\
-                    h = 2.0 + (color.b - color.r) / delta;\
-                }\
-                else {\
-                    h = 4.0 + (color.r - color.g) / delta;\
-                }\
-                h = h * 60.0;\
-                if (h < 0.0)\
-                    h = h + 360.0;\
-            }\
-            color.r = h / 360.0;\
-            color.g = s;\
-            color.b = v;\
-        }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.toHSV, {
-
-    });
-
-    return this;
-}
-
-function incrustStep3() {
-    gl.incrustStep3 = gl.incrustStep3 || new Shader(null, '\
-        uniform sampler2D texture;\
-        varying vec2 texCoord;\
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            vec4 colorb = texture2D(texture, texCoord + vec2(0.0, 0.75));\
-            vec4 colort = texture2D(texture, texCoord + vec2(0.0, 0.50));\
-            if (texCoord.y < 0.25){ \
-                if (colort.r < 0.5){\
-                 color = colorb;\
-                }\
-            }\
-            gl_FragColor = color;\
-        }\
-    ');
-
-    simpleShader.call(this, gl.incrustStep3, {
-
-    });
-
-    return this;
-}
-
-function move(para) {
-    gl.move = gl.move || new Shader(null, '\
-        uniform sampler2D texture;\
-        uniform float brightness;\
-        varying vec2 texCoord;\
-        uniform float para; \
-        void main() {\
-            vec4 color = texture2D(texture, texCoord);\
-            if (texCoord.y < 0.5)\
-            {\
-                vec4 color2 = texture2D(texture, vec2(texCoord.x, texCoord.y + 0.5));\
-                float d = abs(color2.r - color.r) +  abs(color2.g - color.g) +  abs(color2.b - color.b);\
-                d = d * 1.5;\
-                color = vec4(d,d,d,1.0);\
-                if (d < para)\
-                {\
-                    color = vec4(0.0,0.0,0.0,1.0);\
-                }\
-            }\
-            gl_FragColor = color;\
-        }\
-    ');
-    simpleShader.call(this, gl.move, { para : para});
 
     return this;
 }
